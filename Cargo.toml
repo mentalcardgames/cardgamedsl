@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "ast",
+    "ir",
+    "compiler",
+]
