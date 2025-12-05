@@ -1,10 +1,9 @@
 use crate::ast::*;
 
-use bincode::Error;
 use syn::parse::discouraged::Speculative;
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
-use syn::{Ident, LitInt, Token, braced, bracketed, parenthesized};
+use syn::{Ident, LitInt, Token, bracketed, parenthesized};
 
 
 // ------------------------
