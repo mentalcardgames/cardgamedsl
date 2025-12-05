@@ -1,5 +1,6 @@
 use crate::ast::*;
 
+use bincode::Error;
 use syn::parse::discouraged::Speculative;
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
@@ -11,6 +12,7 @@ use syn::{Ident, LitInt, Token, braced, bracketed, parenthesized};
 // ------------------------
 
 mod kw {
+  syn::custom_keyword!(cards);
   syn::custom_keyword!(face);
   syn::custom_keyword!(down);
   syn::custom_keyword!(up);
@@ -58,6 +60,7 @@ mod kw {
   syn::custom_keyword!(Key);
   syn::custom_keyword!(other);
   syn::custom_keyword!(teams);
+  syn::custom_keyword!(player);
 }
 
 // ------------------------
@@ -67,18 +70,28 @@ mod kw {
 impl Parse for Op {
   fn parse(input: ParseStream) -> Result<Self> {
       if input.peek(Token![+]) {
+        input.parse::<Token![+]>()?;
+
         return Ok(Op::Plus)
       }
       if input.peek(Token![-]) {
+        input.parse::<Token![-]>()?;
+
         return Ok(Op::Minus)
       }
       if input.peek(Token![/]) {
+        input.parse::<Token![/]>()?;
+
         return Ok(Op::Div)
       }
       if input.peek(Token![*]) {
+        input.parse::<Token![*]>()?;
+
         return Ok(Op::Mul)
       }
       if input.peek(Token![%]) {
+        input.parse::<Token![%]>()?;
+
         return Ok(Op::Mod)
       }
       
@@ -89,22 +102,34 @@ impl Parse for Op {
 impl Parse for IntCmpOp {
   fn parse(input: ParseStream) -> Result<Self> {
       if input.peek(Token![==]) {
+        input.parse::<Token![==]>()?;
+
         return Ok(IntCmpOp::Eq)
       }
       if input.peek(Token![!=]) {
+        input.parse::<Token![!=]>()?;
+
         return Ok(IntCmpOp::Neq)
       }
-      if input.peek(Token![<]) {
-        return Ok(IntCmpOp::Lt)
-      }
-      if input.peek(Token![>]) {
-        return Ok(IntCmpOp::Gt)
-      }
       if input.peek(Token![<=]) {
+        input.parse::<Token![<=]>()?;
+
         return Ok(IntCmpOp::Le)
       }
       if input.peek(Token![>=]) {
+        input.parse::<Token![>=]>()?;
+
         return Ok(IntCmpOp::Ge)
+      }
+      if input.peek(Token![<]) {
+        input.parse::<Token![<]>()?;
+
+        return Ok(IntCmpOp::Lt)
+      }
+      if input.peek(Token![>]) {
+        input.parse::<Token![>]>()?;
+
+        return Ok(IntCmpOp::Gt)
       }
       
       Err(input.error("IntCmpOp could not be parsed!"))
@@ -114,12 +139,20 @@ impl Parse for IntCmpOp {
 impl Parse for Status {
   fn parse(input: ParseStream) -> Result<Self> {
       if input.peek(kw::face) && input.peek2(kw::down) {
+        input.parse::<kw::face>()?;
+        input.parse::<kw::down>()?;
+
         return Ok(Status::FaceDown)
       }
       if input.peek(kw::face) && input.peek2(kw::up) {
+        input.parse::<kw::face>()?;
+        input.parse::<kw::up>()?;
+
         return Ok(Status::FaceUp)
       }
       if input.peek(kw::private) {
+        input.parse::<kw::private>()?;
+
         return Ok(Status::Private)
       }
       
@@ -130,9 +163,13 @@ impl Parse for Status {
 impl Parse for Quantifier {
   fn parse(input: ParseStream) -> Result<Self> {
       if input.peek(kw::all) {
+        input.parse::<kw::all>()?;
+
         return Ok(Quantifier::All)
       }
       if input.peek(kw::any) {
+        input.parse::<kw::any>()?;
+
         return Ok(Quantifier::Any)
       }
 
@@ -142,6 +179,10 @@ impl Parse for Quantifier {
 
 impl Parse for PlayerExpr {
   fn parse(input: ParseStream) -> Result<Self> {
+      if input.peek(kw::others) {
+
+        return Err(input.error("PlayerExpr can not be KeyWord 'others'!"))
+      }
       if input.peek(kw::current) {
         input.parse::<kw::current>()?;
         return Ok(PlayerExpr::Current)
@@ -221,15 +262,22 @@ impl Parse for LocationExpr {
       if input.peek(kw::of) && input.peek2(kw::team) {
         input.parse::<kw::of>()?;
         input.parse::<kw::team>()?;
+        
+        let content;
+        parenthesized!(content in input);
 
-        let team = input.parse::<TeamExpr>()?;
+        let team = content.parse::<TeamExpr>()?;
 
         return Ok(LocationExpr::LocationTeam(id, team))
       }
-      if input.peek(kw::of) {
+      if input.peek(kw::of) && input.peek2(kw::player) {
         input.parse::<kw::of>()?;
+        input.parse::<kw::player>()?;
 
-        let player = input.parse::<PlayerExpr>()?;
+        let content;
+        parenthesized!(content in input);
+
+        let player = content.parse::<PlayerExpr>()?;
 
         return Ok(LocationExpr::LocationPlayer(id, player))
       }
@@ -258,17 +306,30 @@ impl Parse for CardPosition {
       }
       if input.peek(kw::max) && input.peek2(kw::of) {
         input.parse::<kw::max>()?;
+        input.parse::<kw::of>()?;
 
         let cardset = input.parse::<CardSet>()?;
 
         if input.peek(kw::using) && input.peek2(kw::prec) {
-          let prec_id = (input.parse::<Ident>()?).to_string();
+          input.parse::<kw::using>()?;
+          input.parse::<kw::prec>()?;
+
+          let content;
+          parenthesized!(content in input);
+
+          let prec_id = (content.parse::<Ident>()?).to_string();
 
           return Ok(CardPosition::MaxPrec(Box::new(cardset), prec_id))
         }
 
         if input.peek(kw::using) && input.peek2(kw::point) {
-          let point_id = (input.parse::<Ident>()?).to_string();
+          input.parse::<kw::using>()?;
+          input.parse::<kw::point>()?;
+
+          let content;
+          parenthesized!(content in input);
+
+          let point_id = (content.parse::<Ident>()?).to_string();
 
           return Ok(CardPosition::MaxPoint(Box::new(cardset), point_id))
         }
@@ -277,17 +338,30 @@ impl Parse for CardPosition {
       }
       if input.peek(kw::min) && input.peek2(kw::of) {
         input.parse::<kw::min>()?;
+        input.parse::<kw::of>()?;
 
         let cardset = input.parse::<CardSet>()?;
 
         if input.peek(kw::using) && input.peek2(kw::prec) {
-          let prec_id = (input.parse::<Ident>()?).to_string();
+          input.parse::<kw::using>()?;
+          input.parse::<kw::prec>()?;
+
+          let content;
+          parenthesized!(content in input);
+
+          let prec_id = (content.parse::<Ident>()?).to_string();
 
           return Ok(CardPosition::MinPrec(Box::new(cardset), prec_id))
         }
 
         if input.peek(kw::using) && input.peek2(kw::point) {
-          let point_id = (input.parse::<Ident>()?).to_string();
+          input.parse::<kw::using>()?;
+          input.parse::<kw::point>()?;
+
+          let content;
+          parenthesized!(content in input);
+
+          let point_id = (content.parse::<Ident>()?).to_string();
 
           return Ok(CardPosition::MinPoint(Box::new(cardset), point_id))
         }
@@ -296,8 +370,10 @@ impl Parse for CardPosition {
       }
       
       let location = input.parse::<LocationExpr>()?;
-      input.parse::<kw::at>()?;
-      let int = input.parse::<IntExpr>()?;
+      
+      let content;
+      bracketed!(content in input);
+      let int = content.parse::<IntExpr>()?;
 
       return Ok(CardPosition::At(location, int))
   }
@@ -336,31 +412,46 @@ impl Parse for IntExpr {
       if input.peek(kw::sum) {
         input.parse::<kw::sum>()?;
 
-        let content;
-        parenthesized!(content in input);
-
-        let intcollection = content.parse::<IntCollection>()?;
+        let intcollection = input.parse::<IntCollection>()?;
         return Ok(IntExpr::SumOfIntCollection(intcollection))
       }
       if input.peek(kw::min) && input.peek2(kw::of) {
         input.parse::<kw::min>()?;
         input.parse::<kw::of>()?;
 
-        let intcollection = input.parse::<IntCollection>()?;
+        let cardset = input.parse::<CardSet>()?;
         input.parse::<kw::using>()?;
         let point_id = (input.parse::<Ident>()?).to_string();
 
-        return Ok(IntExpr::MinOf(intcollection))
+        return Ok(IntExpr::MinOf(Box::new(cardset), point_id))
       }
       if input.peek(kw::max) && input.peek2(kw::of) {
         input.parse::<kw::max>()?;
         input.parse::<kw::of>()?;
 
+        let cardset = input.parse::<CardSet>()?;
+        input.parse::<kw::using>()?;
+        let point_id = (input.parse::<Ident>()?).to_string();
+
+        return Ok(IntExpr::MaxOf(Box::new(cardset), point_id))
+      }
+      if input.peek(kw::min) {
+        input.parse::<kw::min>()?;
+
         let intcollection = input.parse::<IntCollection>()?;
 
-        return Ok(IntExpr::MaxOf(intcollection))
+        return Ok(IntExpr::MinIntCollection(intcollection))
+      }
+      if input.peek(kw::max) {
+        input.parse::<kw::max>()?;
+
+        let intcollection = input.parse::<IntCollection>()?;
+
+        return Ok(IntExpr::MaxIntCollection(intcollection))
       }
       if input.peek(kw::stageroundcounter) {
+        input.parse::<kw::stageroundcounter>()?;
+
         return Ok(IntExpr::StageRoundCounter)
       }
 
@@ -415,9 +506,9 @@ fn parse_paren_bool_and(input: ParseStream) -> Result<BoolExpr> {
     let content;
     parenthesized!(content in input);
 
-    let left = input.parse::<BoolExpr>()?;
-    input.parse::<kw::and>()?;
-    let right = input.parse::<BoolExpr>()?;
+    let left = content.parse::<BoolExpr>()?;
+    content.parse::<kw::and>()?;
+    let right = content.parse::<BoolExpr>()?;
 
     Ok(BoolExpr::And(Box::new(left), Box::new(right)))
 }
@@ -426,9 +517,9 @@ fn parse_paren_bool_or(input: ParseStream) -> Result<BoolExpr> {
     let content;
     parenthesized!(content in input);
 
-    let left = input.parse::<BoolExpr>()?;
-    input.parse::<kw::or>()?;
-    let right = input.parse::<BoolExpr>()?;
+    let left = content.parse::<BoolExpr>()?;
+    content.parse::<kw::or>()?;
+    let right = content.parse::<BoolExpr>()?;
 
     Ok(BoolExpr::Or(Box::new(left), Box::new(right)))
 }
@@ -446,7 +537,7 @@ fn parse_string_compare_neq(input: ParseStream) -> Result<BoolExpr> {
     input.parse::<Token![!=]>()?;
     let right = input.parse::<StringExpr>()?;
 
-    Ok(BoolExpr::StringEq(left, right))
+    Ok(BoolExpr::StringNeq(left, right))
 }
 
 fn parse_int_compare(input: ParseStream) -> Result<BoolExpr> {
@@ -458,17 +549,27 @@ fn parse_int_compare(input: ParseStream) -> Result<BoolExpr> {
 }
 
 fn parse_cardset_compare_eq(input: ParseStream) -> Result<BoolExpr> {
-    let left = input.parse::<CardSet>()?;
-    input.parse::<Token![==]>()?;
-    let right = input.parse::<CardSet>()?;
+    input.parse::<kw::cards>()?;
+    
+    let content;
+    parenthesized!(content in input);
+
+    let left = content.parse::<CardSet>()?;
+    content.parse::<Token![==]>()?;
+    let right = content.parse::<CardSet>()?;
 
     return Ok(BoolExpr::CardSetEq(left, right))
 }
 
 fn parse_cardset_compare_neq(input: ParseStream) -> Result<BoolExpr> {
-    let left = input.parse::<CardSet>()?;
-    input.parse::<Token![!=]>()?;
-    let right = input.parse::<CardSet>()?;
+    input.parse::<kw::cards>()?;
+    
+    let content;
+    parenthesized!(content in input);
+
+    let left = content.parse::<CardSet>()?;
+    content.parse::<Token![!=]>()?;
+    let right = content.parse::<CardSet>()?;
 
     return Ok(BoolExpr::CardSetNeq(left, right))
 }
@@ -478,6 +579,7 @@ fn parse_cardset_empty(input: ParseStream) -> Result<BoolExpr> {
     input.parse::<kw::is>()?;
 
     if input.peek(kw::not) {
+        input.parse::<kw::not>()?;
         input.parse::<kw::empty>()?;
 
         return Ok(BoolExpr::CardSetIsNotEmpty(cardset))
@@ -489,33 +591,53 @@ fn parse_cardset_empty(input: ParseStream) -> Result<BoolExpr> {
 }
 
 fn parse_player_compare_eq(input: ParseStream) -> Result<BoolExpr> {
-    let left = input.parse::<PlayerExpr>()?;
-    input.parse::<Token![==]>()?;
-    let right = input.parse::<PlayerExpr>()?;
+    input.parse::<kw::player>()?;
+    
+    let content;
+    parenthesized!(content in input);
+
+    let left = content.parse::<PlayerExpr>()?;
+    content.parse::<Token![==]>()?;
+    let right = content.parse::<PlayerExpr>()?;
 
     return Ok(BoolExpr::PlayerEq(left, right))
 }
 
 fn parse_player_compare_neq(input: ParseStream) -> Result<BoolExpr> {
-    let left = input.parse::<PlayerExpr>()?;
-    input.parse::<Token![!=]>()?;
-    let right = input.parse::<PlayerExpr>()?;
+    input.parse::<kw::player>()?;
+    
+    let content;
+    parenthesized!(content in input);
+
+    let left = content.parse::<PlayerExpr>()?;
+    content.parse::<Token![!=]>()?;
+    let right = content.parse::<PlayerExpr>()?;
 
     return Ok(BoolExpr::PlayerNeq(left, right))
 }
 
 fn parse_team_compare_eq(input: ParseStream) -> Result<BoolExpr> {
-    let left = input.parse::<TeamExpr>()?;
-    input.parse::<Token![==]>()?;
-    let right = input.parse::<TeamExpr>()?;
+    input.parse::<kw::team>()?;
+    
+    let content;
+    parenthesized!(content in input);
+
+    let left = content.parse::<TeamExpr>()?;
+    content.parse::<Token![==]>()?;
+    let right = content.parse::<TeamExpr>()?;
 
     return Ok(BoolExpr::TeamEq(left, right))
 }
 
 fn parse_team_compare_neq(input: ParseStream) -> Result<BoolExpr> {
-    let left = input.parse::<TeamExpr>()?;
-    input.parse::<Token![!=]>()?;
-    let right = input.parse::<TeamExpr>()?;
+    input.parse::<kw::team>()?;
+    
+    let content;
+    parenthesized!(content in input);
+
+    let left = content.parse::<TeamExpr>()?;
+    content.parse::<Token![!=]>()?;
+    let right = content.parse::<TeamExpr>()?;
 
     return Ok(BoolExpr::TeamNeq(left, right))
 }
@@ -526,10 +648,17 @@ fn parse_outof_player(input: ParseStream) -> Result<BoolExpr> {
     input.parse::<kw::of>()?;
 
     if input.peek(kw::stage) {
+      input.parse::<kw::stage>()?;
+
       return Ok(BoolExpr::OutOfStagePlayer(player))
     }
+    if input.peek(kw::game) {
+      input.parse::<kw::game>()?;
 
-    return Ok(BoolExpr::OutOfGamePlayer(player))
+      return Ok(BoolExpr::OutOfGamePlayer(player))
+    }
+
+    Err(input.error("Could not parse 'out of'!"))
 }
 
 fn parse_outof_collection(input: ParseStream) -> Result<BoolExpr> {
@@ -538,10 +667,18 @@ fn parse_outof_collection(input: ParseStream) -> Result<BoolExpr> {
     input.parse::<kw::of>()?;
 
     if input.peek(kw::stage) {
+      input.parse::<kw::stage>()?;
+
       return Ok(BoolExpr::OutOfStageCollection(player_collection))
     }
 
-    return Ok(BoolExpr::OutOfGameCollection(player_collection))
+    if input.peek(kw::game) {
+      input.parse::<kw::game>()?;
+
+      return Ok(BoolExpr::OutOfGameCollection(player_collection))
+    }
+
+    Err(input.error("Could not parse 'out of'!"))
 }
 
 // ===========================================================================
@@ -549,17 +686,14 @@ fn parse_outof_collection(input: ParseStream) -> Result<BoolExpr> {
 // StringExpr ================================================================
 impl Parse for StringExpr {
     fn parse(input: ParseStream) -> Result<Self> {
-        // Try: KeyOf(Key, CardPosition)
         if let Ok(expr) = try_parse_keyof(input) {
             return Ok(expr);
         }
 
-        // Try: StringCollectionAt(IntExpr)
         if let Ok(expr) = try_parse_collection_at(input) {
             return Ok(expr);
         }
 
-        // Finally: ID
         let id = input.parse::<Ident>()?;
         Ok(StringExpr::ID(id.to_string()))
     }
@@ -568,19 +702,18 @@ impl Parse for StringExpr {
 fn try_parse_keyof(input: ParseStream) -> Result<StringExpr> {
     let fork = input.fork();
 
-    // Expect a Key
     let key: Ident = match fork.parse::<Ident>() {
         Ok(k) => k,
         Err(_) => return Err(input.error("not a KeyOf expression")),
     };
 
-    // Expect a CardPosition after it
+    fork.parse::<kw::of>()?;
+
     let position: CardPosition = match fork.parse() {
         Ok(p) => p,
         Err(_) => return Err(input.error("missing CardPosition")),
     };
 
-    // Success → commit
     input.advance_to(&fork);
     Ok(StringExpr::KeyOf(key.to_string(), position))
 }
@@ -588,21 +721,18 @@ fn try_parse_keyof(input: ParseStream) -> Result<StringExpr> {
 fn try_parse_collection_at(input: ParseStream) -> Result<StringExpr> {
     let fork = input.fork();
 
-    // Require a literal identifier "string_collection"
-    if !fork.peek(Ident) {
-        return Err(input.error("not a StringCollectionAt expression"));
-    }
+    let string_collection: StringCollection = match fork.parse::<StringCollection>() {
+      Ok(s) => s,
+      Err(_) => return Err(input.error("missing StringCollection")),
+    };    
 
-    let ident: Ident = fork.parse()?;
-    if ident != "string_collection" {
-        return Err(input.error("not a StringCollectionAt expression"));
-    }
+    let content;
+    bracketed!(content in fork);
 
-    // Parse IntExpr
-    let int: IntExpr = fork.parse()?;
+    let int: IntExpr = content.parse()?;
 
     input.advance_to(&fork);
-    Ok(StringExpr::StringCollectionAt(int))
+    Ok(StringExpr::StringCollectionAt(string_collection, int))
 }
 
 // ===========================================================================
@@ -610,12 +740,18 @@ fn try_parse_collection_at(input: ParseStream) -> Result<StringExpr> {
 impl Parse for PlayerCollection {
   fn parse(input: ParseStream) -> Result<Self> {
       if input.peek(kw::others) {
+        input.parse::<kw::others>()?;
+
         return Ok(PlayerCollection::Others)
       }
       if input.peek(kw::playersin) {
+        input.parse::<kw::playersin>()?;
+
         return Ok(PlayerCollection::PlayersIn)
       }
       if input.peek(kw::playersout) {
+        input.parse::<kw::playersout>()?;
+
         return Ok(PlayerCollection::PlayersOut)
       }
       if input.peek(syn::token::Paren) {
@@ -627,16 +763,9 @@ impl Parse for PlayerCollection {
 
         return Ok(PlayerCollection::Player(players.into_iter().collect()))
       }
-      if input.peek(kw::players) && input.peek2(syn::token::Paren) {
-          input.parse::<kw::players>()?;
-          let content;
-          parenthesized!(content in input);
-          let quantifier = content.parse::<Quantifier>()?;
-
-          return Ok(PlayerCollection::Quantifier(quantifier))
-      }
-
-      Err(input.error("Could not parse PlayerCollection!"))
+      
+      let quantifier = input.parse::<Quantifier>()?;
+      return Ok(PlayerCollection::Quantifier(quantifier))
   }
 }
 
@@ -698,18 +827,6 @@ impl Parse for FilterExpr {
 
           return Ok(FilterExpr::SizeNeq(Box::new(int)))
         }
-        if input.peek(Token![<]) {
-          input.parse::<Token![<]>()?;
-          let int = input.parse::<IntExpr>()?;
-
-          return Ok(FilterExpr::SizeLt(Box::new(int)))
-        }
-        if input.peek(Token![>]) {
-          input.parse::<Token![>]>()?;
-          let int = input.parse::<IntExpr>()?;
-
-          return Ok(FilterExpr::SizeGt(Box::new(int)))
-        }
         if input.peek(Token![<=]) {
           input.parse::<Token![<=]>()?;
           let int = input.parse::<IntExpr>()?;
@@ -721,6 +838,19 @@ impl Parse for FilterExpr {
           let int = input.parse::<IntExpr>()?;
 
           return Ok(FilterExpr::SizeGe(Box::new(int)))
+        }
+
+        if input.peek(Token![<]) {
+          input.parse::<Token![<]>()?;
+          let int = input.parse::<IntExpr>()?;
+
+          return Ok(FilterExpr::SizeLt(Box::new(int)))
+        }
+        if input.peek(Token![>]) {
+          input.parse::<Token![>]>()?;
+          let int = input.parse::<IntExpr>()?;
+
+          return Ok(FilterExpr::SizeGt(Box::new(int)))
         }
 
         return Err(input.error("FilterExpr for 'size' could not been parsed!"))
@@ -795,22 +925,19 @@ impl Parse for Group {
         }
 
         let fork = input.fork();
-        if fork.peek(kw::not) {
-            fork.parse::<kw::not>()?;
-            let combo: String = (fork.parse::<Ident>()?).to_string();
-            fork.parse::<Token![in]>()?;
-            if let Ok(loc) = fork.parse::<LocationExpr>() {
-                input.advance_to(&fork);
-                return Ok(Group::NotComboInLocation(combo, loc));
-            }
-            if let Ok(locs) = fork.parse::<LocationCollection>() {
-                input.advance_to(&fork);
-                return Ok(Group::NotComboInLocationCollection(combo, locs));
-            }
-        }
-
-        let fork = input.fork();
         if let Ok(combo) = fork.parse::<Ident>() {
+            if fork.peek(kw::not) {
+              fork.parse::<kw::not>()?;
+              fork.parse::<Token![in]>()?;
+              if let Ok(loc) = fork.parse::<LocationExpr>() {
+                  input.advance_to(&fork);
+                  return Ok(Group::NotComboInLocation(combo.to_string(), loc));
+              }
+              if let Ok(locs) = fork.parse::<LocationCollection>() {
+                  input.advance_to(&fork);
+                  return Ok(Group::NotComboInLocationCollection(combo.to_string(), locs));
+              }
+            }
             if fork.peek(Token![in]) {
                 fork.parse::<Token![in]>()?;
                 if let Ok(loc) = fork.parse::<LocationExpr>() {
@@ -865,6 +992,7 @@ impl Parse for CardSet {
       let group = input.parse::<Group>()?;
 
       if input.peek(kw::of) {
+        input.parse::<kw::of>()?;
         let fork = input.fork();
         if let Ok(playercollection) = fork.parse::<PlayerCollection>() {
           input.advance_to(&fork);
@@ -921,6 +1049,9 @@ impl Parse for LocationCollection {
 impl Parse for TeamCollection {
   fn parse(input: ParseStream) -> Result<Self> {
       if input.peek(kw::other) && input.peek2(kw::teams) {
+        input.parse::<kw::other>()?;
+        input.parse::<kw::teams>()?;
+
         return Ok(TeamCollection::OtherTeams)
       }
       if input.peek(syn::token::Paren) {

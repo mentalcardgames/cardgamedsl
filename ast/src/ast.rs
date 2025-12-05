@@ -36,8 +36,10 @@ pub enum IntExpr {
     SizeOf(Collection),
     SumOfIntCollection(IntCollection),
     SumOfCardSet(Box<CardSet>, PointMap),
-    MinOf(IntCollection),
-    MaxOf(IntCollection),
+    MinOf(Box<CardSet>, PointMap),
+    MaxOf(Box<CardSet>, PointMap),
+    MinIntCollection(IntCollection),
+    MaxIntCollection(IntCollection),
     StageRoundCounter,
     // PlayRoundCounter,
 }
@@ -95,7 +97,7 @@ pub enum TeamCollection {
 pub enum StringExpr {
     ID(ID),
     KeyOf(Key, CardPosition),
-    StringCollectionAt(IntExpr),
+    StringCollectionAt(StringCollection, IntExpr),
 }
 
 #[derive(Debug, PartialEq)]
