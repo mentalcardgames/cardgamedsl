@@ -1566,7 +1566,7 @@ mod tests {
     #[test]
     fn parses_valid_exchangemove_exchange_quantity() {
         let parsed: ExchangeMove = parse_str(
-          "exchange all hand private with deck"
+          "exchange all from hand private with deck"
         ).unwrap();
         assert_eq!(parsed,
           ExchangeMove::ExchangeQuantity(
@@ -1675,5 +1675,44 @@ mod tests {
 
     // =======================================================================
 
+    // TokenMove =============================================================
+
+    #[test]
+    fn parses_valid_tokenmove_place() {
+        let parsed: TokenMove = parse_str(
+          "place hand to deck"
+        ).unwrap();
+        assert_eq!(parsed,
+          TokenMove::Place(
+            TokenLocExpr::Location(
+              LocationExpr::Location("hand".to_string())
+            ),
+            TokenLocExpr::Location(
+              LocationExpr::Location("deck".to_string())
+            ),
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_tokenmove_place_quantity() {
+        let parsed: TokenMove = parse_str(
+          "place all from hand to deck"
+        ).unwrap();
+        assert_eq!(parsed,
+          TokenMove::PlaceQuantity(
+            Quantity::Quantifier(Quantifier::All),
+            TokenLocExpr::Location(
+              LocationExpr::Location("hand".to_string())
+            ),
+            TokenLocExpr::Location(
+              LocationExpr::Location("deck".to_string())
+            ),
+          )
+        );
+    }
+
+    // =======================================================================
+    
 
 }

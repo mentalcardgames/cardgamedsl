@@ -1,4 +1,5 @@
 use crate::ast::*;
+use crate::parse::kw::location;
 
 use syn::parse::discouraged::Speculative;
 use syn::parse::{Parse, ParseStream, Result};
@@ -11,6 +12,14 @@ use syn::{Ident, LitInt, Token, bracketed, parenthesized};
 // ------------------------
 
 mod kw {
+  syn::custom_keyword!(pointmap);
+  syn::custom_keyword!(precedence);
+  syn::custom_keyword!(token);
+  syn::custom_keyword!(random);
+  syn::custom_keyword!(location);
+  syn::custom_keyword!(table);
+  syn::custom_keyword!(on);
+  syn::custom_keyword!(card);
   syn::custom_keyword!(with);
   syn::custom_keyword!(place);
   syn::custom_keyword!(exchange);
@@ -1394,6 +1403,8 @@ impl Parse for ExchangeMove {
       if let Ok(quantity) = fork.parse::<Quantity>() {
         input.advance_to(&fork);
 
+        input.parse::<kw::from>()?;
+        
         let from_cardset = input.parse::<CardSet>()?;
         let status = input.parse::<Status>()?;
         input.parse::<kw::with>()?;
@@ -1490,3 +1501,231 @@ impl Parse for TokenMove {
       return Ok(TokenMove::Place(from_tokenloc, to_tokenloc))
   }
 }
+
+impl Parse for Rule {
+  fn parse(input: ParseStream) -> Result<Self> {
+      if input.peek(kw::players) && input.peek2(Token![:]) {
+        input.parse::<kw::players>()?;
+        input.parse::<Token![:]>()?;
+
+        let players: Punctuated<Ident, Token![,]> =
+            input.parse_terminated(Ident::parse, Token![,])?;
+
+        return Ok(Rule::CreatePlayer(players.into_iter().map(|p| p.to_string()).collect()))
+      }
+      if input.peek(kw::team) {
+        input.parse::<kw::team>()?;
+
+        let id = (input.parse::<Ident>()?).to_string();
+
+        input.parse::<Token![:]>()?;
+
+        let players: Punctuated<Ident, Token![,]> =
+            input.parse_terminated(Ident::parse, Token![,])?;
+
+        return Ok(Rule::CreateTeam(id, players.into_iter().map(|p| p.to_string()).collect()))
+      }
+      if input.peek(kw::random) && input.peek2(kw::turnorder) && input.peek3(Token![:]) {
+        input.parse::<kw::random>()?;
+        input.parse::<kw::turnorder>()?;
+        input.parse::<Token![:]>()?;
+
+        let players: Punctuated<Ident, Token![,]> =
+            input.parse_terminated(Ident::parse, Token![,])?;
+
+        return Ok(Rule::CreateTurnorderRandom(players.into_iter().map(|p| p.to_string()).collect()))
+      }
+      if input.peek(kw::turnorder) && input.peek2(Token![:]) {
+        input.parse::<kw::turnorder>()?;
+        input.parse::<Token![:]>()?;
+
+        let players: Punctuated<Ident, Token![,]> =
+            input.parse_terminated(Ident::parse, Token![,])?;
+
+        return Ok(Rule::CreateTurnorder(players.into_iter().map(|p| p.to_string()).collect()))
+      }
+      if input.peek(kw::location) {
+        input.parse::<kw::location>()?;
+
+        let location = input.parse::<LocationExpr>()?;
+
+        let fork = input.fork();
+        if let Ok(players) = fork.parse::<PlayerCollection>() {
+          input.advance_to(&fork);
+
+          return Ok(Rule::CreateLocationOnPlayerCollection(
+            location, players)
+          )
+        }
+
+        let fork = input.fork();
+        if let Ok(teams) = fork.parse::<TeamCollection>() {
+          input.advance_to(&fork);
+
+          return Ok(Rule::CreateLocationOnTeamCollection(
+            location, teams)
+          )
+        }
+
+        input.parse::<kw::table>()?;
+
+        return Ok(Rule::CreateLocationOnTable(location))
+      }
+      if input.peek(kw::card) && input.peek2(kw::on) {
+        input.parse::<kw::card>()?;
+        input.parse::<kw::on>()?;
+
+        let location= input.parse::<LocationExpr>()?;
+
+        let types = input.parse::<Types>()?;
+
+        return Ok(Rule::CreateCardOnLocation(
+          location, types)
+        )
+      }
+      if input.peek(kw::token) {
+        input.parse::<kw::token>()?;
+
+        let amount = input.parse::<IntExpr>()?;
+        let token_type = (input.parse::<Ident>()?).to_string();
+        input.parse::<kw::on>()?;
+        let location = input.parse::<LocationExpr>()?;
+
+        let types = input.parse::<Types>()?;
+
+        return Ok(Rule::CreateCardOnLocation(
+          location, types)
+        )
+      }
+      if input.peek(kw::precedence) {
+        input.parse::<kw::precedence>()?;
+
+        let precedence = (input.parse::<Ident>()?).to_string();
+        
+        if input.peek(kw::on) {
+          input.parse::<kw::on>()?;
+
+          let key = (input.parse::<Ident>()?).to_string();
+          
+          let content;
+          parenthesized!(content in input);
+
+          let values: Punctuated<Ident, Token![,]> =
+            content.parse_terminated(Ident::parse, Token![,])?;
+
+          return Ok(Rule::CreatePrecedence(precedence, key, values.iter().map(|v| v.to_string()).collect()))
+        }
+
+        let content;
+        parenthesized!(content in input);
+
+        let mut key_values = Vec::new();
+        while !content.is_empty() {
+          let key = (content.parse::<Ident>()?).to_string();
+          
+          let in_content;
+          parenthesized!(in_content in content);
+
+          let value = (in_content.parse::<Ident>()?).to_string();
+
+          key_values.push((key, value));
+        }
+
+        return Ok(Rule::CreatePrecedencePair(precedence, key_values))
+      }
+      if input.peek(kw::pointmap) {
+        input.parse::<kw::pointmap>()?;
+
+        let pointmap = (input.parse::<Ident>()?).to_string();
+        
+        if input.peek(kw::on) {
+          input.parse::<kw::on>()?;
+
+          let key = (input.parse::<Ident>()?).to_string();
+      
+          let content;
+          parenthesized!(content in input);
+
+          let value_int_pair: Punctuated<ValueIntPair, Token![,]> =
+            content.parse_terminated(ValueIntPair::parse, Token![,])?;
+      
+          return Ok(Rule::CreatePointMap(pointmap, PointMapEntry::KeyValues(key, value_int_pair.into_iter().collect())))
+        }
+
+        let content;
+        parenthesized!(content in input);
+
+        let key_value_int: Punctuated<KeyValueInt, Token![,]> =
+            content.parse_terminated(KeyValueInt::parse, Token![,])?;
+
+        return Ok(Rule::CreatePointMap(pointmap, PointMapEntry::KeyValuesInts(key_value_int.into_iter().collect())))
+      
+      }
+      if input.peek(kw::combo) {
+        input.parse::<kw::combo>()?;
+
+        let combo = (input.parse::<Ident>()?).to_string();
+        input.parse::<Token![where]>()?;
+
+        let filter = input.parse::<FilterExpr>()?;
+
+        return Ok(Rule::CreateCombo(combo, filter))
+      }
+
+
+
+  }
+}
+
+impl Parse for Types {
+  fn parse(input: ParseStream) -> Result<Self> {
+
+      let mut types = Vec::new();
+
+      let key = (input.parse::<Ident>()?).to_string();
+      
+      let content;
+      parenthesized!(content in input);
+
+      let values: Punctuated<Ident, Token![,]> =
+        content.parse_terminated(Ident::parse, Token![,])?;
+
+      types.push((key, values.iter().map(|v| v.to_string()).collect()));
+
+      if input.peek(Token![for]) {
+        input.parse::<Token![for]>()?;
+        let for_types = input.parse::<Types>()?;
+
+        types.extend_from_slice(&for_types.types);
+      }
+
+      return Ok( Types { types: types })
+  }
+}
+
+impl Parse for ValueIntPair {
+  fn parse(input: ParseStream) -> Result<Self> {
+      let value = (input.parse::<Ident>()?).to_string();
+      input.parse::<Token![:]>()?;
+      let int = input.parse::<IntExpr>()?;
+
+      return Ok(ValueIntPair { value, int })
+  }
+}
+
+impl Parse for KeyValueInt {
+  fn parse(input: ParseStream) -> Result<Self> {
+      let key = (input.parse::<Ident>()?).to_string();
+          
+      let content;
+      parenthesized!(content in input);
+
+      let value = (content.parse::<Ident>()?).to_string();
+      content.parse::<Token![:]>()?;
+      let int = content.parse::<IntExpr>()?;
+
+      return Ok(KeyValueInt { key, value, int })
+  }
+}
+
+

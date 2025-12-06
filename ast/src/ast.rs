@@ -253,14 +253,14 @@ pub struct Repititions {
 #[derive(Debug, PartialEq)]
 pub enum Rule {
     // Creations
-    CreatePlayer(Vec<PlayerExpr>),
-    CreateTeam(TeamName, Vec<PlayerExpr>),
-    CreateTurnorder(PlayerCollection),
-    CreateTurnorderRandom(PlayerCollection),
-    CreateLocationOnPlayerCollection(PlayerCollection),
-    CreateLocationOnTeamCollection(TeamCollection),
-    CreateLocationOnTable,
-    CreateCardOnLocation(LocationExpr, Vec<(Key, Vec<Value>)>),
+    CreatePlayer(Vec<PlayerName>),
+    CreateTeam(TeamName, Vec<PlayerName>),
+    CreateTurnorder(Vec<PlayerName>),
+    CreateTurnorderRandom(Vec<PlayerName>),
+    CreateLocationOnPlayerCollection(LocationExpr, PlayerCollection),
+    CreateLocationOnTeamCollection(LocationExpr, TeamCollection),
+    CreateLocationOnTable(LocationExpr),
+    CreateCardOnLocation(LocationExpr, Types),
     CreateTokenOnLocation(LocationExpr, IntExpr, Token),
     CreatePrecedence(Precedence, Key, Vec<Value>),
     CreatePrecedencePair(Precedence, Vec<(Key, Value)>),
@@ -269,8 +269,7 @@ pub enum Rule {
     CreateMemoryStringPlayerCollection(Memory, StringExpr, PlayerCollection),
     CreateMemoryIntTable(Memory, IntExpr, PlayerCollection),
     CreateMemoryStringTable(Memory, StringExpr),
-    CreatePointMap(Precedence, Key, Vec<(Value, IntExpr)>),
-    CreatePointMapPair(Precedence, Vec<(Key, (Value, IntExpr))>),
+    CreatePointMap(Precedence, PointMapEntry),
     // Actions
     FlipAction(CardSet),
     ShuffleAction(CardSet),
@@ -292,6 +291,35 @@ pub enum Rule {
     DemandCardPositionAction(CardPosition),
     DemandStringAction(StringExpr),
     DemandIntAction(IntExpr),
+    // Move-Actions
+    ClassicMove(ClassicMove),
+    DealMove(DealMove),
+    ExchangeMove(ExchangeMove),
+    TokenMove(TokenMove),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Types {
+    pub types: Vec<(Key, Vec<Value>)>
+}
+
+#[derive(Debug, PartialEq)]
+pub enum PointMapEntry {
+    KeyValues(Key, Vec<ValueIntPair>),
+    KeyValuesInts(Vec<KeyValueInt>),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ValueIntPair {
+    pub value: Value,
+    pub int: IntExpr,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct KeyValueInt {
+    pub key: Key,
+    pub value: Value,
+    pub int: IntExpr,
 }
 
 #[derive(Debug, PartialEq)]
