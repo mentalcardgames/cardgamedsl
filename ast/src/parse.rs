@@ -11,6 +11,16 @@ use syn::{Ident, LitInt, Token, bracketed, parenthesized};
 // ------------------------
 
 mod kw {
+  syn::custom_keyword!(with);
+  syn::custom_keyword!(place);
+  syn::custom_keyword!(exchange);
+  syn::custom_keyword!(deal);
+  syn::custom_keyword!(range);
+  syn::custom_keyword!(from);
+  syn::custom_keyword!(to);
+  syn::custom_keyword!(until);
+  syn::custom_keyword!(end);
+  syn::custom_keyword!(times);
   syn::custom_keyword!(cards);
   syn::custom_keyword!(face);
   syn::custom_keyword!(down);
@@ -18,7 +28,6 @@ mod kw {
   syn::custom_keyword!(private);
   syn::custom_keyword!(all);
   syn::custom_keyword!(any);
-
   syn::custom_keyword!(current);
   syn::custom_keyword!(previous);
   syn::custom_keyword!(owner);
@@ -60,6 +69,8 @@ mod kw {
   syn::custom_keyword!(other);
   syn::custom_keyword!(teams);
   syn::custom_keyword!(player);
+  syn::custom_keyword!(locations);
+  syn::custom_keyword!(ints);
 }
 
 // ------------------------
@@ -258,30 +269,31 @@ impl Parse for LocationExpr {
   fn parse(input: ParseStream) -> Result<Self> {
       let id = (input.parse::<Ident>()?).to_string();
 
-      if input.peek(kw::of) && input.peek2(kw::team) {
-        input.parse::<kw::of>()?;
-        input.parse::<kw::team>()?;
+      return Ok(LocationExpr::Location(id))
+      // if input.peek(kw::of) && input.peek2(kw::team) {
+      //   input.parse::<kw::of>()?;
+      //   input.parse::<kw::team>()?;
         
-        let content;
-        parenthesized!(content in input);
+      //   let content;
+      //   parenthesized!(content in input);
 
-        let team = content.parse::<TeamExpr>()?;
+      //   let team = content.parse::<TeamExpr>()?;
 
-        return Ok(LocationExpr::LocationTeam(id, team))
-      }
-      if input.peek(kw::of) && input.peek2(kw::player) {
-        input.parse::<kw::of>()?;
-        input.parse::<kw::player>()?;
+      //   return Ok(LocationExpr::LocationTeam(id, team))
+      // }
+      // if input.peek(kw::of) && input.peek2(kw::player) {
+      //   input.parse::<kw::of>()?;
+      //   input.parse::<kw::player>()?;
 
-        let content;
-        parenthesized!(content in input);
+      //   let content;
+      //   parenthesized!(content in input);
 
-        let player = content.parse::<PlayerExpr>()?;
+      //   let player = content.parse::<PlayerExpr>()?;
 
-        return Ok(LocationExpr::LocationPlayer(id, player))
-      }
+      //   return Ok(LocationExpr::LocationPlayer(id, player))
+      // }
       
-      return Ok(LocationExpr::LocationCurrentOrTable(id))
+      // return Ok(LocationExpr::LocationCurrentOrTable(id))
   }
 }
 
@@ -1085,49 +1097,396 @@ impl Parse for StringCollection {
 
 impl Parse for Collection {
   fn parse(input: ParseStream) -> Result<Self> {
-      let fork = input.fork();
-      if let Ok(playercollection) = fork.parse::<PlayerCollection>() {
-        input.advance_to(&fork);
+    if input.peek(kw::players) {
+      input.parse::<kw::players>()?;
 
-        return Ok(Collection::PlayerCollection(playercollection))
-      }
+      let playercollection = input.parse::<PlayerCollection>()?;
 
-      let fork = input.fork();
-      if let Ok(intcollection) = fork.parse::<IntCollection>() {
-        input.advance_to(&fork);
+      return Ok(Collection::PlayerCollection(playercollection))
+    }
+    if input.peek(kw::teams) {
+      input.parse::<kw::teams>()?;
 
-        return Ok(Collection::IntCollection(intcollection))
-      }
-      
-      let fork = input.fork();
-      if let Ok(stringcollection) = fork.parse::<StringCollection>() {
-        input.advance_to(&fork);
+      let teamcollection = input.parse::<TeamCollection>()?;
 
-        return Ok(Collection::StringCollection(stringcollection))
-      }
-      
-      let fork = input.fork();
-      if let Ok(locationcollection) = fork.parse::<LocationCollection>() {
-        input.advance_to(&fork);
+      return Ok(Collection::TeamCollection(teamcollection))
+    }
+    if input.peek(kw::ints) {
+      input.parse::<kw::ints>()?;
 
-        return Ok(Collection::LocationCollection(locationcollection))
-      }
-      
-      let fork = input.fork();
-      if let Ok(teamcollection) = fork.parse::<TeamCollection>() {
-        input.advance_to(&fork);
+      let intcollection = input.parse::<IntCollection>()?;
 
-        return Ok(Collection::TeamCollection(teamcollection))
-      }
+      return Ok(Collection::IntCollection(intcollection))
+    }
+    if input.peek(kw::ints) {
+      input.parse::<kw::ints>()?;
 
-      let fork = input.fork();
-      if let Ok(cardset) = fork.parse::<CardSet>() {
-        input.advance_to(&fork);
+      let intcollection = input.parse::<IntCollection>()?;
 
-        return Ok(Collection::CardSet(Box::new(cardset)))
-      }
-      
-      Err(input.error("No Collection found to Parse!"))
+      return Ok(Collection::IntCollection(intcollection))
+    }
+    if input.peek(kw::locations) {
+      input.parse::<kw::locations>()?;
+
+      let locationcollection = input.parse::<LocationCollection>()?;
+
+      return Ok(Collection::LocationCollection(locationcollection))
+    }
+    if input.peek(kw::cards) {
+      input.parse::<kw::cards>()?;
+
+      let cardset = input.parse::<CardSet>()?;
+
+      return Ok(Collection::CardSet(Box::new(cardset)))
+    }
+    
+
+    let stringcollection = input.parse::<StringCollection>()?;
+
+    return Ok(Collection::StringCollection(stringcollection))    
   }
 }
 
+// TODO: maybe work out how to do it without ambiguity and no 'types' in the front
+// ===========================================================================
+// ===========================================================================
+// ===========================================================================
+// impl Parse for Collection {
+//   fn parse(input: ParseStream) -> Result<Self> {
+//       let fork = input.fork();
+//       if let Ok(playercollection) = fork.parse::<PlayerCollection>() {
+//         input.advance_to(&fork);
+
+//         return Ok(Collection::PlayerCollection(playercollection))
+//       }
+
+//       let fork = input.fork();
+//       if let Ok(intcollection) = fork.parse::<IntCollection>() {
+//         input.advance_to(&fork);
+
+//         return Ok(Collection::IntCollection(intcollection))
+//       }
+      
+//       let fork = input.fork();
+//       if let Ok(stringcollection) = fork.parse::<StringCollection>() {
+//         input.advance_to(&fork);
+
+//         return Ok(Collection::StringCollection(stringcollection))
+//       }
+      
+//       let fork = input.fork();
+//       if let Ok(locationcollection) = fork.parse::<LocationCollection>() {
+//         input.advance_to(&fork);
+
+//         return Ok(Collection::LocationCollection(locationcollection))
+//       }
+      
+//       let fork = input.fork();
+//       if let Ok(teamcollection) = fork.parse::<TeamCollection>() {
+//         input.advance_to(&fork);
+
+//         return Ok(Collection::TeamCollection(teamcollection))
+//       }
+
+//       let fork = input.fork();
+//       if let Ok(cardset) = fork.parse::<CardSet>() {
+//         input.advance_to(&fork);
+
+//         return Ok(Collection::CardSet(Box::new(cardset)))
+//       }
+      
+//       Err(input.error("No Collection found to Parse!"))
+//   }
+// }
+// ===========================================================================
+// ===========================================================================
+// ===========================================================================
+
+impl Parse for Repititions {
+  fn parse(input: ParseStream) -> Result<Self> {
+      let int = input.parse::<IntExpr>()?;
+
+      input.parse::<kw::times>()?;
+
+      return Ok(Repititions { times: int})
+  }
+}
+
+impl Parse for EndCondition {
+  fn parse(input: ParseStream) -> Result<Self> {
+      input.parse::<kw::until>()?;
+
+      if input.peek(kw::end) {
+        input.parse::<kw::end>()?;
+
+        return Ok(EndCondition::UntilEnd)
+      }
+
+      let fork = input.fork();
+      if let Ok(boolexpr) = fork.parse::<BoolExpr>() {
+        input.advance_to(&fork);
+
+        if input.peek(kw::and) {
+          input.parse::<kw::and>()?;
+
+          let reps = input.parse::<Repititions>()?;
+
+          return Ok(EndCondition::UntilBoolAndRep(boolexpr, reps))
+        }
+        if input.peek(kw::or) {
+          input.parse::<kw::or>()?;
+
+          let reps = input.parse::<Repititions>()?;
+
+          return Ok(EndCondition::UntilBoolOrRep(boolexpr, reps))
+        }
+
+        return Ok(EndCondition::UntilBool(boolexpr))
+      }
+
+      let fork = input.fork();
+      if let Ok(reps) = fork.parse::<Repititions>() {
+        input.advance_to(&fork);
+
+        return Ok(EndCondition::UntilRep(reps))
+      }
+
+      return Err(input.error("EndCondition could not been parsed!"))
+  }
+}
+
+impl Parse for IntRange {
+  fn parse(input: ParseStream) -> Result<Self> {
+      input.parse::<kw::range>()?;
+      
+      let content;
+      parenthesized!(content in input);
+
+      if content.peek(Token![==]) {
+        content.parse::<Token![==]>()?;
+
+        let int = content.parse::<IntExpr>()?;
+
+        return Ok(IntRange::Eq(int))
+      }
+      if content.peek(Token![!=]) {
+        content.parse::<Token![!=]>()?;
+
+        let int = content.parse::<IntExpr>()?;
+
+        return Ok(IntRange::Neq(int))
+      }
+      if content.peek(Token![>=]) {
+        content.parse::<Token![>=]>()?;
+
+        let int = content.parse::<IntExpr>()?;
+
+        return Ok(IntRange::Ge(int))
+      }
+      if content.peek(Token![<=]) {
+        content.parse::<Token![<=]>()?;
+
+        let int = content.parse::<IntExpr>()?;
+
+        return Ok(IntRange::Le(int))
+      }
+      if content.peek(Token![>]) {
+        content.parse::<Token![>]>()?;
+
+        let int = content.parse::<IntExpr>()?;
+
+        return Ok(IntRange::Gt(int))
+      }
+      if content.peek(Token![<]) {
+        content.parse::<Token![<]>()?;
+
+        let int = content.parse::<IntExpr>()?;
+
+        return Ok(IntRange::Lt(int))
+      }
+      
+      return Err(input.error("No IntRange could been parsed!"))
+  }
+}
+
+impl Parse for Quantity {
+  fn parse(input: ParseStream) -> Result<Self> {
+      let fork = input.fork();
+      if let Ok(int) = fork.parse::<IntExpr>() {
+        input.advance_to(&fork);
+
+        return Ok(Quantity::Int(int))
+      }
+      let fork = input.fork();
+      if let Ok(intrange) = fork.parse::<IntRange>() {
+        input.advance_to(&fork);
+
+        return Ok(Quantity::IntRange(intrange))
+      }
+      let fork = input.fork();
+      if let Ok(quantifier) = fork.parse::<Quantifier>() {
+        input.advance_to(&fork);
+
+        return Ok(Quantity::Quantifier(quantifier))
+      }
+      
+      return Err(input.error("Quantity could not been parsed"))
+  }
+}
+
+impl Parse for ClassicMove {
+  fn parse(input: ParseStream) -> Result<Self> {
+      input.parse::<Token![move]>()?;
+
+      let fork = input.fork();
+      if let Ok(quantity) = fork.parse::<Quantity>() {
+        input.advance_to(&fork);
+
+        input.parse::<kw::from>()?;
+        let from_cardset = input.parse::<CardSet>()?;
+        let status = input.parse::<Status>()?;
+        input.parse::<kw::to>()?;
+        let to_cardset = input.parse::<CardSet>()?;
+
+        return Ok(ClassicMove::MoveQuantity(quantity, from_cardset, status, to_cardset))
+      }
+
+      let from_cardset = input.parse::<CardSet>()?;
+      let status = input.parse::<Status>()?;
+      input.parse::<kw::to>()?;
+      let to_cardset = input.parse::<CardSet>()?;
+
+      return Ok(ClassicMove::Move(from_cardset, status, to_cardset))
+  }
+}
+
+impl Parse for DealMove {
+  fn parse(input: ParseStream) -> Result<Self> {
+      input.parse::<kw::deal>()?;
+
+      let fork = input.fork();
+      if let Ok(quantity) = fork.parse::<Quantity>() {
+        input.advance_to(&fork);
+
+        input.parse::<kw::from>()?;
+        let from_cardset = input.parse::<CardSet>()?;
+        let status = input.parse::<Status>()?;
+        input.parse::<kw::to>()?;
+        let to_cardset = input.parse::<CardSet>()?;
+
+        return Ok(DealMove::DealQuantity(quantity, from_cardset, status, to_cardset))
+      }
+
+      let from_cardset = input.parse::<CardSet>()?;
+      let status = input.parse::<Status>()?;
+      input.parse::<kw::to>()?;
+      let to_cardset = input.parse::<CardSet>()?;
+
+      return Ok(DealMove::Deal(from_cardset, status, to_cardset))
+  }
+}
+
+impl Parse for ExchangeMove {
+  fn parse(input: ParseStream) -> Result<Self> {
+      input.parse::<kw::exchange>()?;
+
+      let fork = input.fork();
+      if let Ok(quantity) = fork.parse::<Quantity>() {
+        input.advance_to(&fork);
+
+        let from_cardset = input.parse::<CardSet>()?;
+        let status = input.parse::<Status>()?;
+        input.parse::<kw::with>()?;
+        let to_cardset = input.parse::<CardSet>()?;
+
+        return Ok(ExchangeMove::ExchangeQuantity(quantity, from_cardset, status, to_cardset))
+      }
+
+      let from_cardset = input.parse::<CardSet>()?;
+      let status = input.parse::<Status>()?;
+      input.parse::<kw::with>()?;
+      let to_cardset = input.parse::<CardSet>()?;
+
+      return Ok(ExchangeMove::Exchange(from_cardset, status, to_cardset))
+  }
+}
+
+impl Parse for TokenLocExpr {
+  fn parse(input: ParseStream) -> Result<Self> {
+      let fork = input.fork();
+      if let Ok(location) = fork.parse::<LocationExpr>() {
+        input.advance_to(&fork);
+  
+        if input.peek(kw::of) {
+          input.parse::<kw::of>()?;
+
+          let fork = input.fork();
+          if let Ok(player) = fork.parse::<PlayerExpr>() {
+            input.advance_to(&fork);
+          
+            return Ok(TokenLocExpr::LocationPlayer(location, player))
+          }
+        
+          let fork = input.fork();
+          if let Ok(playercollection) = fork.parse::<PlayerCollection>() {
+            input.advance_to(&fork);
+          
+            return Ok(TokenLocExpr::LocationPlayerCollection(location, playercollection))
+          }
+        }
+
+        return Ok(TokenLocExpr::Location(location))
+      }
+
+      let fork = input.fork();
+      if let Ok(locationcollection) = fork.parse::<LocationCollection>() {
+        input.advance_to(&fork);
+  
+        if input.peek(kw::of) {
+          input.parse::<kw::of>()?;
+
+          let fork = input.fork();
+          if let Ok(player) = fork.parse::<PlayerExpr>() {
+            input.advance_to(&fork);
+          
+            return Ok(TokenLocExpr::LocationCollectionPlayer(locationcollection, player))
+          }
+        
+          let fork = input.fork();
+          if let Ok(playercollection) = fork.parse::<PlayerCollection>() {
+            input.advance_to(&fork);
+          
+            return Ok(TokenLocExpr::LocationCollectionPlayerCollection(locationcollection, playercollection))
+          }
+        }
+
+        return Ok(TokenLocExpr::LocationCollection(locationcollection))
+      }
+
+      return Err(input.error("No TokenLoc found to parse!"))
+  }
+}
+
+impl Parse for TokenMove {
+  fn parse(input: ParseStream) -> Result<Self> {
+      input.parse::<kw::place>()?;
+
+      let fork = input.fork();
+      if let Ok(quantity) = fork.parse::<Quantity>() {
+        input.advance_to(&fork);
+
+        input.parse::<kw::from>()?;
+        let from_tokenloc = input.parse::<TokenLocExpr>()?;
+        input.parse::<kw::to>()?;
+        let to_tokenloc = input.parse::<TokenLocExpr>()?;
+
+        return Ok(TokenMove::PlaceQuantity(quantity, from_tokenloc, to_tokenloc))
+      }
+
+      let from_tokenloc = input.parse::<TokenLocExpr>()?;
+      input.parse::<kw::to>()?;
+      let to_tokenloc = input.parse::<TokenLocExpr>()?;
+
+      return Ok(TokenMove::Place(from_tokenloc, to_tokenloc))
+  }
+}

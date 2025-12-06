@@ -102,9 +102,7 @@ pub enum StringExpr {
 
 #[derive(Debug, PartialEq)]
 pub enum LocationExpr {
-    LocationPlayer(Location, PlayerExpr),
-    LocationTeam(Location, TeamExpr),
-    LocationCurrentOrTable(Location),
+    Location(Location),
 }
 
 #[derive(Debug, PartialEq)]
@@ -161,6 +159,70 @@ pub enum Status {
 pub enum TeamExpr {
     TeamName(TeamName),
     TeamOf(PlayerExpr)
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Quantity {
+    Int(IntExpr),
+    Quantifier(Quantifier),
+    IntRange(IntRange),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum IntRange {
+    Eq(IntExpr),
+    Neq(IntExpr),
+    Gt(IntExpr),
+    Lt(IntExpr),
+    Ge(IntExpr),
+    Le(IntExpr),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Quantifier {
+    All,
+    Any
+}
+
+#[derive(Debug, PartialEq)]
+pub enum CardSet {
+    Group(Group),
+    GroupOfPlayer(Group, PlayerExpr),
+    GroupOfPlayerCollection(Group, PlayerCollection),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Group {
+    Location(LocationExpr),
+    LocationWhere(LocationExpr, FilterExpr),
+    LocationCollection(LocationCollection),
+    LocationCollectionWhere(LocationCollection, FilterExpr),
+    ComboInLocation(Combo, LocationExpr),
+    ComboInLocationCollection(Combo, LocationCollection),
+    NotComboInLocation(Combo, LocationExpr),
+    NotComboInLocationCollection(Combo, LocationCollection),
+    CardPosition(CardPosition),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum FilterExpr {
+    Same(Key),
+    Distinct(Key),
+    Adjacent(Key, Precedence),
+    Higher(Key, Precedence),
+    Lower(Key, Precedence),
+    SizeEq (Box<IntExpr>),
+    SizeNeq(Box<IntExpr>),
+    SizeGt (Box<IntExpr>),
+    SizeLt (Box<IntExpr>),
+    SizeGe (Box<IntExpr>),
+    SizeLe (Box<IntExpr>),
+    KeyEq  (Key, Box<StringExpr>),
+    KeyNeq (Key, Box<StringExpr>),
+    NotCombo(Combo),
+    Combo(Combo),
+    And(Box<FilterExpr>, Box<FilterExpr>),
+    Or(Box<FilterExpr>, Box<FilterExpr>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -257,99 +319,37 @@ pub struct ChoiceRule {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Quantity {
-    Int(IntExpr),
-    Quantifier,
-    IntRange,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum IntRange {
-    Eq(IntExpr),
-    Neq(IntExpr),
-    Gt(IntExpr),
-    Lt(IntExpr),
-    Ge(IntExpr),
-    Le(IntExpr),
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Quantifier {
-    All,
-    Any
-}
-
-#[derive(Debug, PartialEq)]
-pub enum CardSet {
-    Group(Group),
-    GroupOfPlayer(Group, PlayerExpr),
-    GroupOfPlayerCollection(Group, PlayerCollection),
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Group {
-    Location(LocationExpr),
-    LocationWhere(LocationExpr, FilterExpr),
-    LocationCollection(LocationCollection),
-    LocationCollectionWhere(LocationCollection, FilterExpr),
-    ComboInLocation(Combo, LocationExpr),
-    ComboInLocationCollection(Combo, LocationCollection),
-    NotComboInLocation(Combo, LocationExpr),
-    NotComboInLocationCollection(Combo, LocationCollection),
-    CardPosition(CardPosition),
-}
-
-#[derive(Debug, PartialEq)]
-pub enum FilterExpr {
-    Same(Key),
-    Distinct(Key),
-    Adjacent(Key, Precedence),
-    Higher(Key, Precedence),
-    Lower(Key, Precedence),
-    SizeEq (Box<IntExpr>),
-    SizeNeq(Box<IntExpr>),
-    SizeGt (Box<IntExpr>),
-    SizeLt (Box<IntExpr>),
-    SizeGe (Box<IntExpr>),
-    SizeLe (Box<IntExpr>),
-    KeyEq  (Key, Box<StringExpr>),
-    KeyNeq (Key, Box<StringExpr>),
-    NotCombo(Combo),
-    Combo(Combo),
-    And(Box<FilterExpr>, Box<FilterExpr>),
-    Or(Box<FilterExpr>, Box<FilterExpr>),
-}
-
-#[derive(Debug, PartialEq)]
 pub enum ClassicMove {
     Move(CardSet, Status, CardSet),
-    MoveQuantifier(CardSet, Status, CardSet),
+    MoveQuantity(Quantity, CardSet, Status, CardSet),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum DealMove {
     Deal(CardSet, Status, CardSet),
-    DealQuantifier(CardSet, Status, CardSet),
+    DealQuantity(Quantity, CardSet, Status, CardSet),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum ExchangeMove {
     Exchange(CardSet, Status, CardSet),
-    ExchangeQuantifier(CardSet, Status, CardSet),
+    ExchangeQuantity(Quantity, CardSet, Status, CardSet),
 }
 
 #[derive(Debug, PartialEq)]
-pub enum TokeMove {
+pub enum TokenMove {
     Place(TokenLocExpr, TokenLocExpr),
-    PlaceQuantifier(TokenLocExpr, Status, TokenLocExpr),
+    PlaceQuantity(Quantity, TokenLocExpr, TokenLocExpr),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum TokenLocExpr {
-    LocationPlayer(LocationExpr),
-    LocationCollectionPlayer(LocationCollection),
-    LocationPlayerCollection(LocationExpr),
-    LocationCollectionPlayerCollection(LocationCollection),
+    Location(LocationExpr),
+    LocationCollection(LocationCollection),
+    LocationPlayer(LocationExpr, PlayerExpr),
+    LocationCollectionPlayer(LocationCollection, PlayerExpr),
+    LocationPlayerCollection(LocationExpr, PlayerCollection),
+    LocationCollectionPlayerCollection(LocationCollection, PlayerCollection),
 }
 
 #[derive(Debug, PartialEq)]
@@ -359,3 +359,4 @@ pub enum ScoreRule {
     ScorePlayerCollection(IntExpr, PlayerCollection),
     ScorePlayerCollectionMemory(IntExpr, Memory, PlayerCollection),
 }
+

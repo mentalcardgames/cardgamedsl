@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
-    // use super::*;
     use ast::ast::*;
     use syn::parse_str;
 
     // PlayerExpr ============================================================
+    
     #[test]
     fn parses_valid_player_current() {
         let parsed: PlayerExpr = parse_str(
@@ -64,6 +64,7 @@ mod tests {
     // =======================================================================
 
     // Op ====================================================================
+    
     #[test]
     fn parses_valid_op_plus() {
         let parsed: Op = parse_str(
@@ -106,6 +107,7 @@ mod tests {
     // =======================================================================
 
     // IntCmpOp ==============================================================
+    
     #[test]
     fn parses_valid_intcmpop_eq() {
         let parsed: IntCmpOp = parse_str(
@@ -185,6 +187,7 @@ mod tests {
     // =======================================================================
 
     // Quantifier ============================================================
+    
     #[test]
     fn parses_valid_quantifier_all() {
         let parsed: Quantifier = parse_str(
@@ -204,6 +207,7 @@ mod tests {
     // =======================================================================
 
     // TeamExpr ==============================================================
+    
     #[test]
     fn parses_valid_teamexpr_team_of() {
         let parsed: TeamExpr = parse_str(
@@ -223,28 +227,13 @@ mod tests {
     // =======================================================================
 
     // LocationExpr ==========================================================
+    
     #[test]
-    fn parses_valid_locationexpr_of_team() {
-        let parsed: LocationExpr = parse_str(
-          "hand of team(team of current)"
-        ).unwrap();
-        assert_eq!(parsed, LocationExpr::LocationTeam("hand".to_string(), TeamExpr::TeamOf(PlayerExpr::Current)));
-    }
-
-    #[test]
-    fn parses_valid_locationexpr_of_player() {
-        let parsed: LocationExpr = parse_str(
-          "hand of player(current)"
-        ).unwrap();
-        assert_eq!(parsed, LocationExpr::LocationPlayer("hand".to_string(), PlayerExpr::Current));
-    }
-
-    #[test]
-    fn parses_valid_locationexpr_of_current_or_table() {
+    fn parses_valid_locationexpr() {
         let parsed: LocationExpr = parse_str(
           "hand"
         ).unwrap();
-        assert_eq!(parsed, LocationExpr::LocationCurrentOrTable("hand".to_string()));
+        assert_eq!(parsed, LocationExpr::Location("hand".to_string()));
     }
 
     // =======================================================================
@@ -256,7 +245,7 @@ mod tests {
         let parsed: CardPosition = parse_str(
           "top of hand"
         ).unwrap();
-        assert_eq!(parsed, CardPosition::Top(LocationExpr::LocationCurrentOrTable("hand".to_string())));
+        assert_eq!(parsed, CardPosition::Top(LocationExpr::Location("hand".to_string())));
     }
 
     #[test]
@@ -264,7 +253,7 @@ mod tests {
         let parsed: CardPosition = parse_str(
           "bottom of hand"
         ).unwrap();
-        assert_eq!(parsed, CardPosition::Bottom(LocationExpr::LocationCurrentOrTable("hand".to_string())));
+        assert_eq!(parsed, CardPosition::Bottom(LocationExpr::Location("hand".to_string())));
     }
 
     #[test]
@@ -272,7 +261,7 @@ mod tests {
         let parsed: CardPosition = parse_str(
           "max of hand using prec(aces)"
         ).unwrap();
-        assert_eq!(parsed, CardPosition::MaxPrec(Box::new(CardSet::Group(Group::Location(LocationExpr::LocationCurrentOrTable("hand".to_string())))), "aces".to_string()));
+        assert_eq!(parsed, CardPosition::MaxPrec(Box::new(CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string())))), "aces".to_string()));
     }
 
     #[test]
@@ -280,7 +269,7 @@ mod tests {
         let parsed: CardPosition = parse_str(
           "min of hand using prec(aces)"
         ).unwrap();
-        assert_eq!(parsed, CardPosition::MinPrec(Box::new(CardSet::Group(Group::Location(LocationExpr::LocationCurrentOrTable("hand".to_string())))), "aces".to_string()));
+        assert_eq!(parsed, CardPosition::MinPrec(Box::new(CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string())))), "aces".to_string()));
     }
 
     #[test]
@@ -288,7 +277,7 @@ mod tests {
         let parsed: CardPosition = parse_str(
           "max of hand using point(aces)"
         ).unwrap();
-        assert_eq!(parsed, CardPosition::MaxPoint(Box::new(CardSet::Group(Group::Location(LocationExpr::LocationCurrentOrTable("hand".to_string())))), "aces".to_string()));
+        assert_eq!(parsed, CardPosition::MaxPoint(Box::new(CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string())))), "aces".to_string()));
     }
 
     #[test]
@@ -296,7 +285,7 @@ mod tests {
         let parsed: CardPosition = parse_str(
           "min of hand using point(aces)"
         ).unwrap();
-        assert_eq!(parsed, CardPosition::MinPoint(Box::new(CardSet::Group(Group::Location(LocationExpr::LocationCurrentOrTable("hand".to_string())))), "aces".to_string()));
+        assert_eq!(parsed, CardPosition::MinPoint(Box::new(CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string())))), "aces".to_string()));
     }
 
     #[test]
@@ -304,7 +293,7 @@ mod tests {
         let parsed: CardPosition = parse_str(
           "hand[3]"
         ).unwrap();
-        assert_eq!(parsed, CardPosition::At(LocationExpr::LocationCurrentOrTable("hand".to_string()), IntExpr::Int(3)));
+        assert_eq!(parsed, CardPosition::At(LocationExpr::Location("hand".to_string()), IntExpr::Int(3)));
     }
 
     // =======================================================================
@@ -330,7 +319,7 @@ mod tests {
     #[test]
     fn parses_valid_intexpr_size_of() {
         let parsed: IntExpr = parse_str(
-          "size of (3, 3)"
+          "size of ints(3, 3)"
         ).unwrap();
         assert_eq!(parsed, IntExpr::SizeOf(Collection::IntCollection(
           IntCollection {
@@ -357,7 +346,7 @@ mod tests {
           "sum of hand using aces"
         ).unwrap();
         assert_eq!(parsed, IntExpr::SumOfCardSet(
-          Box::new(CardSet::Group(Group::Location(LocationExpr::LocationCurrentOrTable("hand".to_string())))), "aces".to_string())
+          Box::new(CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string())))), "aces".to_string())
         );
     }
 
@@ -391,7 +380,7 @@ mod tests {
           "min of hand using aces"
         ).unwrap();
         assert_eq!(parsed, IntExpr::MinOf(
-          Box::new(CardSet::Group(Group::Location(LocationExpr::LocationCurrentOrTable("hand".to_string())))), "aces".to_string())
+          Box::new(CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string())))), "aces".to_string())
         );
     }
     
@@ -401,7 +390,7 @@ mod tests {
           "max of hand using aces"
         ).unwrap();
         assert_eq!(parsed, IntExpr::MaxOf(
-          Box::new(CardSet::Group(Group::Location(LocationExpr::LocationCurrentOrTable("hand".to_string())))), "aces".to_string())
+          Box::new(CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string())))), "aces".to_string())
         );
     }
     
@@ -505,8 +494,8 @@ mod tests {
           "cards(hand == hand)"
         ).unwrap();
         assert_eq!(parsed, BoolExpr::CardSetEq(
-          CardSet::Group(Group::Location(LocationExpr::LocationCurrentOrTable("hand".to_string()))),
-          CardSet::Group(Group::Location(LocationExpr::LocationCurrentOrTable("hand".to_string()))),
+          CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string()))),
+          CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string()))),
         ));
     }
     
@@ -516,8 +505,8 @@ mod tests {
           "cards(hand != hand)"
         ).unwrap();
         assert_eq!(parsed, BoolExpr::CardSetNeq(
-          CardSet::Group(Group::Location(LocationExpr::LocationCurrentOrTable("hand".to_string()))),
-          CardSet::Group(Group::Location(LocationExpr::LocationCurrentOrTable("hand".to_string()))),
+          CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string()))),
+          CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string()))),
         ));
     }
 
@@ -527,7 +516,7 @@ mod tests {
           "hand is empty"
         ).unwrap();
         assert_eq!(parsed, BoolExpr::CardSetIsEmpty(
-          CardSet::Group(Group::Location(LocationExpr::LocationCurrentOrTable("hand".to_string())))
+          CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string())))
         ));
     }
 
@@ -537,7 +526,7 @@ mod tests {
           "hand is not empty"
         ).unwrap();
         assert_eq!(parsed, BoolExpr::CardSetIsNotEmpty(
-          CardSet::Group(Group::Location(LocationExpr::LocationCurrentOrTable("hand".to_string())))
+          CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string())))
         ));
     }
     
@@ -615,7 +604,7 @@ mod tests {
         ).unwrap();
         assert_eq!(parsed, StringExpr::KeyOf(
           "rank".to_string(),
-          CardPosition::Top(LocationExpr::LocationCurrentOrTable("hand".to_string()))
+          CardPosition::Top(LocationExpr::Location("hand".to_string()))
         ));
     }
 
@@ -904,7 +893,7 @@ mod tests {
         ).unwrap();
         assert_eq!(parsed, 
           Group::Location(
-            LocationExpr::LocationCurrentOrTable("hand".to_string())
+            LocationExpr::Location("hand".to_string())
           )
         );
     }
@@ -916,7 +905,7 @@ mod tests {
         ).unwrap();
         assert_eq!(parsed, 
           Group::LocationWhere(
-            LocationExpr::LocationCurrentOrTable("hand".to_string()),
+            LocationExpr::Location("hand".to_string()),
             FilterExpr::Same("rank".to_string())
           )
         );
@@ -931,8 +920,8 @@ mod tests {
           Group::LocationCollection(
             LocationCollection {
               locations: vec![
-                LocationExpr::LocationCurrentOrTable("hand".to_string()),
-                LocationExpr::LocationCurrentOrTable("stack".to_string())
+                LocationExpr::Location("hand".to_string()),
+                LocationExpr::Location("stack".to_string())
               ]
             }
           )
@@ -948,8 +937,8 @@ mod tests {
           Group::LocationCollectionWhere(
             LocationCollection {
               locations: vec![
-                LocationExpr::LocationCurrentOrTable("hand".to_string()),
-                LocationExpr::LocationCurrentOrTable("stack".to_string())
+                LocationExpr::Location("hand".to_string()),
+                LocationExpr::Location("stack".to_string())
               ]
             },
             FilterExpr::Same("rank".to_string())
@@ -966,7 +955,7 @@ mod tests {
         assert_eq!(parsed, 
           Group::ComboInLocation(
             "Pair".to_string(),
-            LocationExpr::LocationCurrentOrTable("hand".to_string())
+            LocationExpr::Location("hand".to_string())
           )
         );
     }
@@ -981,8 +970,8 @@ mod tests {
             "Pair".to_string(),
             LocationCollection {
               locations: vec![
-                LocationExpr::LocationCurrentOrTable("hand".to_string()),
-                LocationExpr::LocationCurrentOrTable("stack".to_string())
+                LocationExpr::Location("hand".to_string()),
+                LocationExpr::Location("stack".to_string())
               ]
             }
           )
@@ -997,7 +986,7 @@ mod tests {
         assert_eq!(parsed, 
           Group::NotComboInLocation(
             "Pair".to_string(),
-            LocationExpr::LocationCurrentOrTable("hand".to_string())
+            LocationExpr::Location("hand".to_string())
           )
         );
     }
@@ -1012,8 +1001,8 @@ mod tests {
             "Pair".to_string(),
             LocationCollection {
               locations: vec![
-                LocationExpr::LocationCurrentOrTable("hand".to_string()),
-                LocationExpr::LocationCurrentOrTable("stack".to_string())
+                LocationExpr::Location("hand".to_string()),
+                LocationExpr::Location("stack".to_string())
               ]
             }
           )
@@ -1027,7 +1016,7 @@ mod tests {
         ).unwrap();
         assert_eq!(parsed, 
           Group::CardPosition(
-            CardPosition::Top(LocationExpr::LocationCurrentOrTable("hand".to_string()))
+            CardPosition::Top(LocationExpr::Location("hand".to_string()))
           )
         );
     }
@@ -1044,7 +1033,7 @@ mod tests {
         assert_eq!(parsed, 
           CardSet::Group(
             Group::CardPosition(
-              CardPosition::Top(LocationExpr::LocationCurrentOrTable("hand".to_string()))
+              CardPosition::Top(LocationExpr::Location("hand".to_string()))
             )
           )
         );
@@ -1058,7 +1047,7 @@ mod tests {
         assert_eq!(parsed, 
           CardSet::GroupOfPlayer(
             Group::LocationWhere(
-              LocationExpr::LocationCurrentOrTable("hand".to_string()),
+              LocationExpr::Location("hand".to_string()),
               FilterExpr::Same("rank".to_string())
             ),
             PlayerExpr::Current
@@ -1074,7 +1063,7 @@ mod tests {
         assert_eq!(parsed, 
           CardSet::GroupOfPlayerCollection(
             Group::LocationWhere(
-              LocationExpr::LocationCurrentOrTable("hand".to_string()),
+              LocationExpr::Location("hand".to_string()),
               FilterExpr::Same("rank".to_string())
             ),
             PlayerCollection::Others
@@ -1083,4 +1072,608 @@ mod tests {
     }
 
     // =======================================================================
+
+    // IntCollection =========================================================
+
+    #[test]
+    fn parses_valid_intcollection() {
+        let parsed: IntCollection = parse_str(
+          "(1, 2, 3, 4, 5)"
+        ).unwrap();
+        assert_eq!(parsed, 
+          IntCollection {
+            ints: vec![
+              IntExpr::Int(1),
+              IntExpr::Int(2),
+              IntExpr::Int(3),
+              IntExpr::Int(4),
+              IntExpr::Int(5),
+            ]
+          }
+        );
+    }
+
+    // =======================================================================
+
+    // LocationCollection ====================================================
+
+    #[test]
+    fn parses_valid_locationcollection() {
+        let parsed: LocationCollection = parse_str(
+          "(hand, deck, hand)"
+        ).unwrap();
+        assert_eq!(parsed, 
+          LocationCollection {
+            locations: vec![
+              LocationExpr::Location("hand".to_string()),
+              LocationExpr::Location("deck".to_string()),
+              LocationExpr::Location("hand".to_string()),
+            ]
+          }
+        );
+    }
+
+    // =======================================================================
+
+    // TeamCollection ========================================================
+
+    #[test]
+    fn parses_valid_teamcollection_other_teams() {
+        let parsed: TeamCollection = parse_str(
+          "other teams"
+        ).unwrap();
+        assert_eq!(parsed, 
+          TeamCollection::OtherTeams
+        );
+    }
+
+    #[test]
+    fn parses_valid_teamcollection_teams() {
+        let parsed: TeamCollection = parse_str(
+          "(T1, T2)"
+        ).unwrap();
+        assert_eq!(parsed,
+          TeamCollection::Team(
+            vec![
+              TeamExpr::TeamName("T1".to_string()),
+              TeamExpr::TeamName("T2".to_string()),
+            ]
+          )
+        );
+    }
+
+    // =======================================================================
+
+    // StringCollection ======================================================
+
+    #[test]
+    fn parses_valid_stringcollection() {
+        let parsed: StringCollection = parse_str(
+          "(A, B)"
+        ).unwrap();
+        assert_eq!(parsed,
+          StringCollection {
+            strings: vec![
+              StringExpr::ID("A".to_string()),
+              StringExpr::ID("B".to_string()),
+            ]
+          }
+        );
+    }
+
+    // =======================================================================
+
+    // Collection ============================================================
+
+    #[test]
+    fn parses_valid_collection_playercollection() {
+        let parsed: Collection = parse_str(
+          "players(current, previous)"
+        ).unwrap();
+        assert_eq!(parsed,
+          Collection::PlayerCollection(
+            PlayerCollection::Player(
+              vec![
+                PlayerExpr::Current,
+                PlayerExpr::Previous,
+              ]
+            )
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_collection_teamcollection() {
+        let parsed: Collection = parse_str(
+          "teams(T1, T2)"
+        ).unwrap();
+        assert_eq!(parsed,
+          Collection::TeamCollection(
+            TeamCollection::Team(
+              vec![
+                TeamExpr::TeamName("T1".to_string()),
+                TeamExpr::TeamName("T2".to_string()),
+              ]
+            )
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_collection_intcollection() {
+        let parsed: Collection = parse_str(
+          "ints(1, 2, 3)"
+        ).unwrap();
+        assert_eq!(parsed,
+          Collection::IntCollection(
+            IntCollection {
+              ints: vec![
+                IntExpr::Int(1),
+                IntExpr::Int(2),
+                IntExpr::Int(3),
+              ]
+            }
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_collection_locationcollection() {
+        let parsed: Collection = parse_str(
+          "locations(hand, deck, hand)"
+        ).unwrap();
+        assert_eq!(parsed,
+          Collection::LocationCollection(
+            LocationCollection {
+              locations: vec![
+                LocationExpr::Location("hand".to_string()),
+                LocationExpr::Location("deck".to_string()),
+                LocationExpr::Location("hand".to_string())
+              ]
+            }
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_collection_cardset() {
+        let parsed: Collection = parse_str(
+          "cards(hand, deck, hand)"
+        ).unwrap();
+        assert_eq!(parsed,
+          Collection::CardSet(
+            Box::new(
+              CardSet::Group(
+                Group::LocationCollection(
+                  LocationCollection {
+                    locations: vec![
+                      LocationExpr::Location("hand".to_string()),
+                      LocationExpr::Location("deck".to_string()),
+                      LocationExpr::Location("hand".to_string())
+                    ]
+                  }
+                )
+              )
+            )
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_collection_stringcollection() {
+        let parsed: Collection = parse_str(
+          "(A, B, C)"
+        ).unwrap();
+        assert_eq!(parsed,
+          Collection::StringCollection(
+            StringCollection {
+            strings: vec![
+              StringExpr::ID("A".to_string()),
+              StringExpr::ID("B".to_string()),
+              StringExpr::ID("C".to_string()),
+            ]
+          }
+          )
+        );
+    }
+
+    // =======================================================================
+
+    // Repititions ===========================================================
+
+    #[test]
+    fn parses_valid_repititions() {
+        let parsed: Repititions = parse_str(
+          "3 times"
+        ).unwrap();
+        assert_eq!(parsed,
+          Repititions {
+            times: IntExpr::Int(3)
+          }
+        );
+    }
+
+    // =======================================================================
+
+    // EndCondition ==========================================================
+
+    #[test]
+    fn parses_valid_endcondition_until_end() {
+        let parsed: EndCondition = parse_str(
+          "until end"
+        ).unwrap();
+        assert_eq!(parsed,
+          EndCondition::UntilEnd
+        );
+    }
+
+    #[test]
+    fn parses_valid_endcondition_until_reps() {
+        let parsed: EndCondition = parse_str(
+          "until 3 times"
+        ).unwrap();
+        assert_eq!(parsed,
+          EndCondition::UntilRep(
+            Repititions {
+              times: IntExpr::Int(3)
+            }
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_endcondition_until_bool() {
+        let parsed: EndCondition = parse_str(
+          "until 3 == 2"
+        ).unwrap();
+        assert_eq!(parsed,
+          EndCondition::UntilBool(
+            BoolExpr::IntCmp(IntExpr::Int(3), IntCmpOp::Eq, IntExpr::Int(2))
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_endcondition_until_bool_and_rep() {
+        let parsed: EndCondition = parse_str(
+          "until 3 == 2 and 3 times"
+        ).unwrap();
+        assert_eq!(parsed,
+          EndCondition::UntilBoolAndRep(
+            BoolExpr::IntCmp(IntExpr::Int(3), IntCmpOp::Eq, IntExpr::Int(2)),
+            Repititions {
+              times: IntExpr::Int(3)
+            }
+          )
+        );
+    }
+    
+    #[test]
+    fn parses_valid_endcondition_until_bool_or_rep() {
+        let parsed: EndCondition = parse_str(
+          "until 3 == 2 or 3 times"
+        ).unwrap();
+        assert_eq!(parsed,
+          EndCondition::UntilBoolOrRep(
+            BoolExpr::IntCmp(IntExpr::Int(3), IntCmpOp::Eq, IntExpr::Int(2)),
+            Repititions {
+              times: IntExpr::Int(3)
+            }
+          )
+        );
+    }
+    
+    // =======================================================================
+
+    // IntRange ==============================================================
+
+    #[test]
+    fn parses_valid_endcondition_intrange_eq() {
+        let parsed: IntRange = parse_str(
+          "range(== 2)"
+        ).unwrap();
+        assert_eq!(parsed,
+          IntRange::Eq(
+            IntExpr::Int(2)
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_endcondition_intrange_neq() {
+        let parsed: IntRange = parse_str(
+          "range(!= 2)"
+        ).unwrap();
+        assert_eq!(parsed,
+          IntRange::Neq(
+            IntExpr::Int(2)
+          )
+        );
+    }
+    
+    #[test]
+    fn parses_valid_endcondition_intrange_ge() {
+        let parsed: IntRange = parse_str(
+          "range(>= 2)"
+        ).unwrap();
+        assert_eq!(parsed,
+          IntRange::Ge(
+            IntExpr::Int(2)
+          )
+        );
+    }
+    
+    #[test]
+    fn parses_valid_endcondition_intrange_le() {
+        let parsed: IntRange = parse_str(
+          "range(<= 2)"
+        ).unwrap();
+        assert_eq!(parsed,
+          IntRange::Le(
+            IntExpr::Int(2)
+          )
+        );
+    }
+    
+    #[test]
+    fn parses_valid_endcondition_intrange_gt() {
+        let parsed: IntRange = parse_str(
+          "range(> 2)"
+        ).unwrap();
+        assert_eq!(parsed,
+          IntRange::Gt(
+            IntExpr::Int(2)
+          )
+        );
+    }
+    
+    #[test]
+    fn parses_valid_endcondition_intrange_lt() {
+        let parsed: IntRange = parse_str(
+          "range(< 2)"
+        ).unwrap();
+        assert_eq!(parsed,
+          IntRange::Lt(
+            IntExpr::Int(2)
+          )
+        );
+    }
+
+    // =======================================================================
+
+    // Quantity ==============================================================
+
+    #[test]
+    fn parses_valid_quantity_int() {
+        let parsed: Quantity = parse_str(
+          "3"
+        ).unwrap();
+        assert_eq!(parsed,
+          Quantity::Int(
+            IntExpr::Int(3)
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_quantity_intrange() {
+        let parsed: Quantity = parse_str(
+          "range(== 3)"
+        ).unwrap();
+        assert_eq!(parsed,
+          Quantity::IntRange(
+            IntRange::Eq(IntExpr::Int(3))
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_quantity_quantifier() {
+        let parsed: Quantity = parse_str(
+          "all"
+        ).unwrap();
+        assert_eq!(parsed,
+          Quantity::Quantifier(
+            Quantifier::All
+          )
+        );
+    }
+    
+    // =======================================================================
+
+    // ClassicMove ===========================================================
+
+    #[test]
+    fn parses_valid_classicmove_move() {
+        let parsed: ClassicMove = parse_str(
+          "move hand private to deck"
+        ).unwrap();
+        assert_eq!(parsed,
+          ClassicMove::Move(
+            CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string()))),
+            Status::Private,
+            CardSet::Group(Group::Location(LocationExpr::Location("deck".to_string())))
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_classicmove_move_quantity() {
+        let parsed: ClassicMove = parse_str(
+          "move all from hand private to deck"
+        ).unwrap();
+        assert_eq!(parsed,
+          ClassicMove::MoveQuantity(
+            Quantity::Quantifier(Quantifier::All),
+            CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string()))),
+            Status::Private,
+            CardSet::Group(Group::Location(LocationExpr::Location("deck".to_string())))
+          )
+        );
+    }
+
+    // =======================================================================
+
+    // DealMove ===========================================================
+
+    #[test]
+    fn parses_valid_dealmove_deal() {
+        let parsed: DealMove = parse_str(
+          "deal hand private to deck"
+        ).unwrap();
+        assert_eq!(parsed,
+          DealMove::Deal(
+            CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string()))),
+            Status::Private,
+            CardSet::Group(Group::Location(LocationExpr::Location("deck".to_string())))
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_dealmove_deal_quantity() {
+        let parsed: DealMove = parse_str(
+          "deal all from hand private to deck"
+        ).unwrap();
+        assert_eq!(parsed,
+          DealMove::DealQuantity(
+            Quantity::Quantifier(Quantifier::All),
+            CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string()))),
+            Status::Private,
+            CardSet::Group(Group::Location(LocationExpr::Location("deck".to_string())))
+          )
+        );
+    }
+
+    // =======================================================================
+
+        // DealMove ===========================================================
+
+    #[test]
+    fn parses_valid_exchangemove_exchange() {
+        let parsed: ExchangeMove = parse_str(
+          "exchange hand private with deck"
+        ).unwrap();
+        assert_eq!(parsed,
+          ExchangeMove::Exchange(
+            CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string()))),
+            Status::Private,
+            CardSet::Group(Group::Location(LocationExpr::Location("deck".to_string())))
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_exchangemove_exchange_quantity() {
+        let parsed: ExchangeMove = parse_str(
+          "exchange all hand private with deck"
+        ).unwrap();
+        assert_eq!(parsed,
+          ExchangeMove::ExchangeQuantity(
+            Quantity::Quantifier(Quantifier::All),
+            CardSet::Group(Group::Location(LocationExpr::Location("hand".to_string()))),
+            Status::Private,
+            CardSet::Group(Group::Location(LocationExpr::Location("deck".to_string())))
+          )
+        );
+    }
+
+    // =======================================================================
+
+    // TokenLocExpr ==========================================================
+
+    #[test]
+    fn parses_valid_tokenloc_expr_location() {
+        let parsed: TokenLocExpr = parse_str(
+          "hand"
+        ).unwrap();
+        assert_eq!(parsed,
+          TokenLocExpr::Location(
+            LocationExpr::Location("hand".to_string())
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_tokenloc_expr_location_player() {
+        let parsed: TokenLocExpr = parse_str(
+          "hand of current"
+        ).unwrap();
+        assert_eq!(parsed,
+          TokenLocExpr::LocationPlayer(
+            LocationExpr::Location("hand".to_string()),
+            PlayerExpr::Current
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_tokenloc_expr_location_playercollection() {
+        let parsed: TokenLocExpr = parse_str(
+          "hand of others"
+        ).unwrap();
+        assert_eq!(parsed,
+          TokenLocExpr::LocationPlayerCollection(
+            LocationExpr::Location("hand".to_string()),
+            PlayerCollection::Others
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_tokenloc_expr_locationcollection() {
+        let parsed: TokenLocExpr = parse_str(
+          "(hand, deck)"
+        ).unwrap();
+        assert_eq!(parsed,
+          TokenLocExpr::LocationCollection(
+            LocationCollection {
+              locations: vec![
+                LocationExpr::Location("hand".to_string()),
+                LocationExpr::Location("deck".to_string()),
+              ]
+            }
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_tokenloc_expr_locationcollection_player() {
+        let parsed: TokenLocExpr = parse_str(
+          "(hand, deck) of current"
+        ).unwrap();
+        assert_eq!(parsed,
+          TokenLocExpr::LocationCollectionPlayer(
+            LocationCollection {
+              locations: vec![
+                LocationExpr::Location("hand".to_string()),
+                LocationExpr::Location("deck".to_string()),
+              ]
+            },
+            PlayerExpr::Current
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_tokenloc_expr_locationcollection_playercollection() {
+        let parsed: TokenLocExpr = parse_str(
+          "(hand, deck) of others"
+        ).unwrap();
+        assert_eq!(parsed,
+          TokenLocExpr::LocationCollectionPlayerCollection(
+            LocationCollection {
+              locations: vec![
+                LocationExpr::Location("hand".to_string()),
+                LocationExpr::Location("deck".to_string()),
+              ]
+            },
+            PlayerCollection::Others
+          )
+        );
+    }
+
+    // =======================================================================
+
+
 }
