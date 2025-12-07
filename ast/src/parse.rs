@@ -1,5 +1,5 @@
 use crate::ast::*;
-use crate::parse::kw::location;
+use crate::parse::kw::{location, point};
 
 use syn::parse::discouraged::Speculative;
 use syn::parse::{Parse, ParseStream, Result};
@@ -12,6 +12,18 @@ use syn::{Ident, LitInt, Token, bracketed, parenthesized};
 // ------------------------
 
 mod kw {
+  syn::custom_keyword!(turn);
+  syn::custom_keyword!(winner);
+  syn::custom_keyword!(demand);
+  syn::custom_keyword!(cycle);
+  syn::custom_keyword!(bid);
+  syn::custom_keyword!(successful);
+  syn::custom_keyword!(fail);
+  syn::custom_keyword!(set);
+  syn::custom_keyword!(shuffle);
+  syn::custom_keyword!(flip);
+  syn::custom_keyword!(combo);
+  syn::custom_keyword!(memory);
   syn::custom_keyword!(pointmap);
   syn::custom_keyword!(precedence);
   syn::custom_keyword!(token);
@@ -1605,33 +1617,14 @@ impl Parse for Rule {
         if input.peek(kw::on) {
           input.parse::<kw::on>()?;
 
-          let key = (input.parse::<Ident>()?).to_string();
-          
-          let content;
-          parenthesized!(content in input);
+          let key_values = input.parse::<OnKeyPrec>()?;
 
-          let values: Punctuated<Ident, Token![,]> =
-            content.parse_terminated(Ident::parse, Token![,])?;
-
-          return Ok(Rule::CreatePrecedence(precedence, key, values.iter().map(|v| v.to_string()).collect()))
+          return Ok(Rule::CreatePrecedence(precedence, key_values))
         }
 
-        let content;
-        parenthesized!(content in input);
-
-        let mut key_values = Vec::new();
-        while !content.is_empty() {
-          let key = (content.parse::<Ident>()?).to_string();
-          
-          let in_content;
-          parenthesized!(in_content in content);
-
-          let value = (in_content.parse::<Ident>()?).to_string();
-
-          key_values.push((key, value));
-        }
-
-        return Ok(Rule::CreatePrecedencePair(precedence, key_values))
+        let key_value_pairs = input.parse::<KeyValuePairs>()?;
+        
+        return Ok(Rule::CreatePrecedencePairs(precedence, key_value_pairs));
       }
       if input.peek(kw::pointmap) {
         input.parse::<kw::pointmap>()?;
@@ -1641,25 +1634,14 @@ impl Parse for Rule {
         if input.peek(kw::on) {
           input.parse::<kw::on>()?;
 
-          let key = (input.parse::<Ident>()?).to_string();
-      
-          let content;
-          parenthesized!(content in input);
+          let on_key_point = input.parse::<OnKeyPoint>()?;
 
-          let value_int_pair: Punctuated<ValueIntPair, Token![,]> =
-            content.parse_terminated(ValueIntPair::parse, Token![,])?;
-      
-          return Ok(Rule::CreatePointMap(pointmap, PointMapEntry::KeyValues(key, value_int_pair.into_iter().collect())))
+          return Ok(Rule::CreatePointMap(pointmap, on_key_point))
         }
 
-        let content;
-        parenthesized!(content in input);
+        let key_value_int = input.parse::<KeyValueInt>()?;
 
-        let key_value_int: Punctuated<KeyValueInt, Token![,]> =
-            content.parse_terminated(KeyValueInt::parse, Token![,])?;
-
-        return Ok(Rule::CreatePointMap(pointmap, PointMapEntry::KeyValuesInts(key_value_int.into_iter().collect())))
-      
+        return Ok(Rule::CreatePointMapPairs(pointmap, key_value_int))
       }
       if input.peek(kw::combo) {
         input.parse::<kw::combo>()?;
@@ -1671,9 +1653,190 @@ impl Parse for Rule {
 
         return Ok(Rule::CreateCombo(combo, filter))
       }
+      if input.peek(kw::memory) {
+        input.parse::<kw::memory>()?;
 
+        let memory = (input.parse::<Ident>()?).to_string();
 
+        let fork = input.fork();
+        if let Ok(int) = fork.parse::<IntExpr>() {
+          input.advance_to(&fork);
 
+          input.parse::<kw::on>()?;
+
+          if input.peek(kw::table) {
+            input.parse::<kw::table>()?;
+
+            return Ok(Rule::CreateMemoryIntTable(memory, int))
+          }
+
+          let player_collection = input.parse::<PlayerCollection>()?;
+
+          return Ok(Rule::CreateMemoryIntPlayerCollection(memory, int, player_collection))
+        }
+
+        let fork = input.fork();
+        if let Ok(string) = fork.parse::<StringExpr>() {
+          input.advance_to(&fork);
+
+          input.parse::<kw::on>()?;
+
+          if input.peek(kw::table) {
+            input.parse::<kw::table>()?;
+
+            return Ok(Rule::CreateMemoryStringTable(memory, string))
+          }
+
+          let player_collection = input.parse::<PlayerCollection>()?;
+
+          return Ok(Rule::CreateMemoryStringPlayerCollection(memory, string, player_collection))
+        }
+
+        return Err(input.error("No CreateMemory found to parse!"))
+      }
+      if input.peek(kw::flip) {
+        input.parse::<kw::flip>()?;
+
+        let cardset = input.parse::<CardSet>()?;
+        input.parse::<kw::to>()?;
+        let status  = input.parse::<Status>()?;
+
+        return Ok(Rule::FlipAction(cardset, status))
+      }
+      if input.peek(kw::shuffle) {
+        input.parse::<kw::shuffle>()?;
+      
+        let cardset = input.parse::<CardSet>()?;
+        
+        return Ok(Rule::ShuffleAction(cardset))
+      }
+      if input.peek(kw::set) {
+        input.parse::<kw::set>()?;
+
+        let fork = input.fork();
+        if let Ok(player) = fork.parse::<PlayerExpr>() {
+          input.advance_to(&fork);
+
+          input.parse::<kw::out>()?;
+          input.parse::<kw::of>()?;
+          if input.peek(kw::stage) {
+            input.parse::<kw::stage>()?;
+
+            return Ok(Rule::PlayerOutOfStageAction(player))
+          }
+          if input.peek(kw::game) && input.peek2(kw::successful) {
+            input.parse::<kw::game>()?;
+            input.parse::<kw::successful>()?;
+
+            return Ok(Rule::PlayerOutOfGameSuccAction(player))
+          }
+          if input.peek(kw::game) && input.peek2(kw::fail) {
+            input.parse::<kw::game>()?;
+            input.parse::<kw::successful>()?;
+
+            return Ok(Rule::PlayerOutOfGameFailAction(player))
+          }
+
+          return Err(input.error("No OutAction found to parse for PlayerExpr!"))
+        }
+      
+        let fork = input.fork();
+        if let Ok(playercollection) = fork.parse::<PlayerCollection>() {
+          input.advance_to(&fork);
+
+          input.parse::<kw::out>()?;
+          input.parse::<kw::of>()?;
+          if input.peek(kw::stage) {
+            input.parse::<kw::stage>()?;
+
+            return Ok(Rule::PlayerCollectionOutOfStageAction(playercollection))
+          }
+          if input.peek(kw::game) && input.peek2(kw::successful) {
+            input.parse::<kw::game>()?;
+            input.parse::<kw::successful>()?;
+
+            return Ok(Rule::PlayerCollectionOutOfGameSuccAction(playercollection))
+          }
+          if input.peek(kw::game) && input.peek2(kw::fail) {
+            input.parse::<kw::game>()?;
+            input.parse::<kw::successful>()?;
+
+            return Ok(Rule::PlayerCollectionOutOfGameFailAction(playercollection))
+          }
+
+          return Err(input.error("No OutAction found to parse for PlayerCollection!"))
+        }
+
+        return Err(input.error("No OutAction found to parse!"))
+      }
+      if input.peek(kw::cycle) {
+        input.parse::<kw::cycle>()?;
+        input.parse::<kw::to>()?;
+
+        let player = input.parse::<PlayerExpr>()?;
+
+        return Ok(Rule::CycleAction(player))
+      }
+      if input.peek(kw::bid) {
+        input.parse::<kw::bid>()?;
+
+        let quantity = input.parse::<Quantity>()?;
+
+        if input.peek(kw::on) {
+          input.parse::<kw::on>()?;
+
+          let memory = (input.parse::<Ident>()?).to_string();
+
+          return Ok(Rule::BidActionMemory(memory, quantity))
+        }
+
+        return Ok(Rule::BidAction(quantity))
+      }
+      if input.peek(kw::end) && input.peek2(kw::turn) {
+        input.parse::<kw::end>()?;
+        input.parse::<kw::turn>()?;
+
+        return Ok(Rule::EndTurn)
+      }
+      if input.peek(kw::end) && input.peek2(kw::stage) {
+        input.parse::<kw::end>()?;
+        input.parse::<kw::stage>()?;
+
+        return Ok(Rule::EndStage)
+      }
+      if input.peek(kw::end) && input.peek(kw::game) {
+        input.parse::<kw::end>()?;
+        input.parse::<kw::game>()?;
+        input.parse::<kw::with>()?;
+        input.parse::<kw::winner>()?;
+
+        let player = input.parse::<PlayerExpr>()?;
+
+        return Ok(Rule::EndGameWithWinner(player))
+      }
+      if input.peek(kw::demand) {
+        input.parse::<kw::demand>()?;
+        let fork = input.fork();
+        if let Ok(cardposition) = fork.parse::<CardPosition>() {
+          input.advance_to(&fork);
+
+          return Ok(Rule::DemandCardPositionAction(cardposition))
+        }
+        let fork = input.fork();
+        if let Ok(string) = fork.parse::<StringExpr>() {
+          input.advance_to(&fork);
+
+          return Ok(Rule::DemandStringAction(string))
+        }
+        let fork = input.fork();
+        if let Ok(int) = fork.parse::<IntExpr>() {
+          input.advance_to(&fork);
+
+          return Ok(Rule::DemandIntAction(int))
+        }
+      }
+
+      return Err(input.error("No Rule found to parse!"))
   }
 }
 
@@ -1703,6 +1866,41 @@ impl Parse for Types {
   }
 }
 
+impl Parse for OnKeyPrec {
+  fn parse(input: ParseStream) -> Result<Self> {
+      let key = (input.parse::<Ident>()?).to_string();
+
+      let content;
+      parenthesized!(content in input);
+
+      let values: Punctuated<Ident, Token![,]> =
+        content.parse_terminated(Ident::parse, Token![,])?;
+
+      return Ok(OnKeyPrec { key, values: values.into_iter().map(|v| v.to_string()).collect()})   
+  }
+}
+
+impl Parse for KeyValuePairs {
+  fn parse(input: ParseStream) -> Result<Self> {
+      let content;
+      parenthesized!(content in input);
+
+      let mut key_value_vec = Vec::new();
+      while !content.is_empty() {
+        let key = (content.parse::<Ident>()?).to_string();
+
+        let in_content;
+        parenthesized!(in_content in content);
+
+        let value = (content.parse::<Ident>()?).to_string();
+
+        key_value_vec.push((key, value));
+      }
+
+      return Ok(KeyValuePairs { key_value: key_value_vec })
+  }
+}
+
 impl Parse for ValueIntPair {
   fn parse(input: ParseStream) -> Result<Self> {
       let value = (input.parse::<Ident>()?).to_string();
@@ -1713,19 +1911,39 @@ impl Parse for ValueIntPair {
   }
 }
 
-impl Parse for KeyValueInt {
+impl Parse for OnKeyPoint {
   fn parse(input: ParseStream) -> Result<Self> {
       let key = (input.parse::<Ident>()?).to_string();
-          
+
       let content;
       parenthesized!(content in input);
 
-      let value = (content.parse::<Ident>()?).to_string();
-      content.parse::<Token![:]>()?;
-      let int = content.parse::<IntExpr>()?;
+      let value_int_pairs: Punctuated<ValueIntPair, Token![,]> =
+        content.parse_terminated(ValueIntPair::parse, Token![,])?;
 
-      return Ok(KeyValueInt { key, value, int })
+      return Ok(OnKeyPoint { key, value_int_vec: value_int_pairs.into_iter().collect() })
   }
 }
 
+impl Parse for KeyValueInt {
+  fn parse(input: ParseStream) -> Result<Self> {
+      let content;
+      parenthesized!(content in input);
 
+      let mut key_value_int_vec = Vec::new();
+      while !content.is_empty() {
+        let key = (input.parse::<Ident>()?).to_string();
+          
+        let in_content;
+        parenthesized!(in_content in content);
+
+        let value = (in_content.parse::<Ident>()?).to_string();
+        in_content.parse::<Token![:]>()?;
+        let int = in_content.parse::<IntExpr>()?;
+
+        key_value_int_vec.push((key, value, int));
+      }
+      
+      return Ok(KeyValueInt { key_value_int_vec: key_value_int_vec })
+  }
+}

@@ -262,16 +262,17 @@ pub enum Rule {
     CreateLocationOnTable(LocationExpr),
     CreateCardOnLocation(LocationExpr, Types),
     CreateTokenOnLocation(LocationExpr, IntExpr, Token),
-    CreatePrecedence(Precedence, Key, Vec<Value>),
-    CreatePrecedencePair(Precedence, Vec<(Key, Value)>),
+    CreatePrecedence(Precedence, OnKeyPrec),
+    CreatePrecedencePairs(Precedence, KeyValuePairs),
     CreateCombo(Combo, FilterExpr),
     CreateMemoryIntPlayerCollection(Memory, IntExpr, PlayerCollection),
     CreateMemoryStringPlayerCollection(Memory, StringExpr, PlayerCollection),
-    CreateMemoryIntTable(Memory, IntExpr, PlayerCollection),
+    CreateMemoryIntTable(Memory, IntExpr),
     CreateMemoryStringTable(Memory, StringExpr),
-    CreatePointMap(Precedence, PointMapEntry),
+    CreatePointMap(Precedence, OnKeyPoint),
+    CreatePointMapPairs(Precedence, KeyValueInt),
     // Actions
-    FlipAction(CardSet),
+    FlipAction(CardSet, Status),
     ShuffleAction(CardSet),
     PlayerOutOfStageAction(PlayerExpr),
     PlayerOutOfGameSuccAction(PlayerExpr),
@@ -284,7 +285,7 @@ pub enum Rule {
     SetMemoryCollection(Memory, Collection),
     CycleAction(PlayerExpr),
     BidAction(Quantity),
-    BidActionMemory(Quantity),
+    BidActionMemory(Memory, Quantity),
     EndTurn,
     EndStage,
     EndGameWithWinner(PlayerExpr),
@@ -304,22 +305,31 @@ pub struct Types {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum PointMapEntry {
-    KeyValues(Key, Vec<ValueIntPair>),
-    KeyValuesInts(Vec<KeyValueInt>),
+pub struct OnKeyPrec {
+    pub key: Key,
+    pub values: Vec<Value>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct KeyValuePairs {
+    pub key_value: Vec<(Key, Value)>
 }
 
 #[derive(Debug, PartialEq)]
 pub struct ValueIntPair {
     pub value: Value,
-    pub int: IntExpr,
+    pub int: IntExpr
+}
+
+#[derive(Debug, PartialEq)]
+pub struct OnKeyPoint {
+    pub key: Key,
+    pub value_int_vec: Vec<ValueIntPair>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct KeyValueInt {
-    pub key: Key,
-    pub value: Value,
-    pub int: IntExpr,
+    pub key_value_int_vec: Vec<(Key, Value, IntExpr)>,
 }
 
 #[derive(Debug, PartialEq)]
