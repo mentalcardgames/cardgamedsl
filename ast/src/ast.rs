@@ -1,18 +1,20 @@
+use syn::Ident;
+
 // Types
-pub type Stage = String;
-pub type PlayerName = String;
-pub type TeamName = String;
-pub type Location = String;
-pub type Token = String;
+pub type Stage = Ident;
+pub type PlayerName = Ident;
+pub type TeamName = Ident;
+pub type Location = Ident;
+pub type Token = Ident;
 
-pub type Precedence = String;
-pub type PointMap = String;
-pub type Combo = String;
-pub type Memory = String;
-pub type Key = String;
-pub type Value = String;
+pub type Precedence = Ident;
+pub type PointMap = Ident;
+pub type Combo = Ident;
+pub type Memory = Ident;
+pub type Key = Ident;
+pub type Value = Ident;
 
-pub type ID = String; 
+pub type ID = Ident; 
 
 // Structs + Enums
 #[derive(Debug, PartialEq)]
@@ -75,7 +77,7 @@ pub struct StringCollection {
 
 #[derive(Debug, PartialEq)]
 pub struct LocationCollection {
-    pub locations: Vec<LocationExpr>
+    pub locations: Vec<Location>
 }
 
 #[derive(Debug, PartialEq)]
@@ -101,15 +103,10 @@ pub enum StringExpr {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum LocationExpr {
-    Location(Location),
-}
-
-#[derive(Debug, PartialEq)]
 pub enum CardPosition {
-    At(LocationExpr, IntExpr),
-    Top(LocationExpr),
-    Bottom(LocationExpr),
+    At(Location, IntExpr),
+    Top(Location),
+    Bottom(Location),
     MaxPrec (Box<CardSet>, Precedence),
     MinPrec (Box<CardSet>, Precedence),
     MaxPoint(Box<CardSet>, PointMap),
@@ -193,13 +190,13 @@ pub enum CardSet {
 
 #[derive(Debug, PartialEq)]
 pub enum Group {
-    Location(LocationExpr),
-    LocationWhere(LocationExpr, FilterExpr),
+    Location(Location),
+    LocationWhere(Location, FilterExpr),
     LocationCollection(LocationCollection),
     LocationCollectionWhere(LocationCollection, FilterExpr),
-    ComboInLocation(Combo, LocationExpr),
+    ComboInLocation(Combo, Location),
     ComboInLocationCollection(Combo, LocationCollection),
-    NotComboInLocation(Combo, LocationExpr),
+    NotComboInLocation(Combo, Location),
     NotComboInLocationCollection(Combo, LocationCollection),
     CardPosition(CardPosition),
 }
@@ -257,11 +254,11 @@ pub enum Rule {
     CreateTeam(TeamName, Vec<PlayerName>),
     CreateTurnorder(Vec<PlayerName>),
     CreateTurnorderRandom(Vec<PlayerName>),
-    CreateLocationOnPlayerCollection(LocationExpr, PlayerCollection),
-    CreateLocationOnTeamCollection(LocationExpr, TeamCollection),
-    CreateLocationOnTable(LocationExpr),
-    CreateCardOnLocation(LocationExpr, Types),
-    CreateTokenOnLocation(LocationExpr, IntExpr, Token),
+    CreateLocationOnPlayerCollection(Location, PlayerCollection),
+    CreateLocationOnTeamCollection(Location, TeamCollection),
+    CreateLocationOnTable(Location),
+    CreateCardOnLocation(Location, Types),
+    CreateTokenOnLocation(IntExpr, Token, Location),
     CreatePrecedence(Precedence, OnKeyPrec),
     CreatePrecedencePairs(Precedence, KeyValuePairs),
     CreateCombo(Combo, FilterExpr),
@@ -269,6 +266,8 @@ pub enum Rule {
     CreateMemoryStringPlayerCollection(Memory, StringExpr, PlayerCollection),
     CreateMemoryIntTable(Memory, IntExpr),
     CreateMemoryStringTable(Memory, StringExpr),
+    CreateMemoryPlayerCollection(Memory, PlayerCollection),
+    CreateMemoryTable(Memory),
     CreatePointMap(Precedence, OnKeyPoint),
     CreatePointMapPairs(Precedence, KeyValueInt),
     // Actions
@@ -382,11 +381,11 @@ pub enum TokenMove {
 
 #[derive(Debug, PartialEq)]
 pub enum TokenLocExpr {
-    Location(LocationExpr),
+    Location(Location),
     LocationCollection(LocationCollection),
-    LocationPlayer(LocationExpr, PlayerExpr),
+    LocationPlayer(Location, PlayerExpr),
     LocationCollectionPlayer(LocationCollection, PlayerExpr),
-    LocationPlayerCollection(LocationExpr, PlayerCollection),
+    LocationPlayerCollection(Location, PlayerCollection),
     LocationCollectionPlayerCollection(LocationCollection, PlayerCollection),
 }
 

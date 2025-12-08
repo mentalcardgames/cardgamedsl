@@ -1,10 +1,9 @@
 use crate::ast::*;
-use crate::parse::kw::{location, point};
 
 use syn::parse::discouraged::Speculative;
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
-use syn::{Ident, LitInt, Token, bracketed, parenthesized};
+use syn::{LitInt, Token, bracketed, parenthesized};
 
 
 // ------------------------
@@ -12,6 +11,7 @@ use syn::{Ident, LitInt, Token, bracketed, parenthesized};
 // ------------------------
 
 mod kw {
+  syn::custom_keyword!(next);
   syn::custom_keyword!(turn);
   syn::custom_keyword!(winner);
   syn::custom_keyword!(demand);
@@ -222,6 +222,10 @@ impl Parse for PlayerExpr {
         input.parse::<kw::previous>()?;
         return Ok(PlayerExpr::Previous)
       }
+      if input.peek(kw::next) {
+        input.parse::<kw::next>()?;
+        return Ok(PlayerExpr::Next)
+      }
       if input.peek(kw::competitor) {
         input.parse::<kw::competitor>()?;
         return Ok(PlayerExpr::Competitor)
@@ -231,18 +235,18 @@ impl Parse for PlayerExpr {
         input.parse::<kw::of>()?;
         input.parse::<kw::highest>()?;
 
-        let memory = input.parse::<Ident>()?;
+        let memory = input.parse::<Memory>()?;
 
-        return Ok(PlayerExpr::OwnerOfHighest(memory.to_string()))
+        return Ok(PlayerExpr::OwnerOfHighest(memory))
       }
       if input.peek(kw::owner) && input.peek2(kw::of) && input.peek3(kw::lowest)  {
         input.parse::<kw::owner>()?;
         input.parse::<kw::of>()?;
         input.parse::<kw::lowest>()?;
 
-        let memory = input.parse::<Ident>()?;
+        let memory = input.parse::<Memory>()?;
 
-        return Ok(PlayerExpr::OwnerOfLowest(memory.to_string()))
+        return Ok(PlayerExpr::OwnerOfLowest(memory))
       }
       if input.peek(kw::turnorder)  {
         input.parse::<kw::turnorder>()?;
@@ -263,9 +267,9 @@ impl Parse for PlayerExpr {
         return Ok(PlayerExpr::OwnerOf(Box::new(cardpos)))
       }
 
-      let playername = input.parse::<Ident>()?;
+      let playername = input.parse::<PlayerName>()?;
       
-      return Ok(PlayerExpr::PlayerName(playername.to_string()))
+      return Ok(PlayerExpr::PlayerName(playername))
   }
 }
 
@@ -280,41 +284,9 @@ impl Parse for TeamExpr {
         return Ok(TeamExpr::TeamOf(player))
       }
 
-      let teamname = input.parse::<Ident>()?;
+      let teamname = input.parse::<TeamName>()?;
       
-      return Ok(TeamExpr::TeamName(teamname.to_string()))
-  }
-}
-
-impl Parse for LocationExpr {
-  fn parse(input: ParseStream) -> Result<Self> {
-      let id = (input.parse::<Ident>()?).to_string();
-
-      return Ok(LocationExpr::Location(id))
-      // if input.peek(kw::of) && input.peek2(kw::team) {
-      //   input.parse::<kw::of>()?;
-      //   input.parse::<kw::team>()?;
-        
-      //   let content;
-      //   parenthesized!(content in input);
-
-      //   let team = content.parse::<TeamExpr>()?;
-
-      //   return Ok(LocationExpr::LocationTeam(id, team))
-      // }
-      // if input.peek(kw::of) && input.peek2(kw::player) {
-      //   input.parse::<kw::of>()?;
-      //   input.parse::<kw::player>()?;
-
-      //   let content;
-      //   parenthesized!(content in input);
-
-      //   let player = content.parse::<PlayerExpr>()?;
-
-      //   return Ok(LocationExpr::LocationPlayer(id, player))
-      // }
-      
-      // return Ok(LocationExpr::LocationCurrentOrTable(id))
+      return Ok(TeamExpr::TeamName(teamname))
   }
 }
 
@@ -324,7 +296,7 @@ impl Parse for CardPosition {
         input.parse::<kw::top>()?;
         input.parse::<kw::of>()?;
 
-        let location = input.parse::<LocationExpr>()?;
+        let location = input.parse::<Location>()?;
 
         return Ok(CardPosition::Top(location))
       }
@@ -332,7 +304,7 @@ impl Parse for CardPosition {
         input.parse::<kw::bottom>()?;
         input.parse::<kw::of>()?;
 
-        let location = input.parse::<LocationExpr>()?;
+        let location = input.parse::<Location>()?;
 
         return Ok(CardPosition::Bottom(location))
       }
@@ -349,9 +321,9 @@ impl Parse for CardPosition {
           let content;
           parenthesized!(content in input);
 
-          let prec_id = (content.parse::<Ident>()?).to_string();
+          let precedence = content.parse::<Precedence>()?;
 
-          return Ok(CardPosition::MaxPrec(Box::new(cardset), prec_id))
+          return Ok(CardPosition::MaxPrec(Box::new(cardset), precedence))
         }
 
         if input.peek(kw::using) && input.peek2(kw::point) {
@@ -361,9 +333,9 @@ impl Parse for CardPosition {
           let content;
           parenthesized!(content in input);
 
-          let point_id = (content.parse::<Ident>()?).to_string();
+          let pointmap = content.parse::<PointMap>()?;
 
-          return Ok(CardPosition::MaxPoint(Box::new(cardset), point_id))
+          return Ok(CardPosition::MaxPoint(Box::new(cardset), pointmap))
         }
 
         return Err(input.error("No Precedence or PointMap found to parse!"))
@@ -381,9 +353,9 @@ impl Parse for CardPosition {
           let content;
           parenthesized!(content in input);
 
-          let prec_id = (content.parse::<Ident>()?).to_string();
+          let precedence = content.parse::<Precedence>()?;
 
-          return Ok(CardPosition::MinPrec(Box::new(cardset), prec_id))
+          return Ok(CardPosition::MinPrec(Box::new(cardset), precedence))
         }
 
         if input.peek(kw::using) && input.peek2(kw::point) {
@@ -393,15 +365,15 @@ impl Parse for CardPosition {
           let content;
           parenthesized!(content in input);
 
-          let point_id = (content.parse::<Ident>()?).to_string();
+          let pointmap = content.parse::<PointMap>()?;
 
-          return Ok(CardPosition::MinPoint(Box::new(cardset), point_id))
+          return Ok(CardPosition::MinPoint(Box::new(cardset), pointmap))
         }
 
         return Err(input.error("No Precedence or PointMap found to parse!"))
       }
       
-      let location = input.parse::<LocationExpr>()?;
+      let location = input.parse::<Location>()?;
       
       let content;
       bracketed!(content in input);
@@ -437,9 +409,9 @@ impl Parse for IntExpr {
 
         let cardset = input.parse::<CardSet>()?;
         input.parse::<kw::using>()?;
-        let point_id = (input.parse::<Ident>()?).to_string();
+        let pointmap = input.parse::<PointMap>()?;
 
-        return Ok(IntExpr::SumOfCardSet(Box::new(cardset), point_id))
+        return Ok(IntExpr::SumOfCardSet(Box::new(cardset), pointmap))
       }
       if input.peek(kw::sum) {
         input.parse::<kw::sum>()?;
@@ -453,9 +425,9 @@ impl Parse for IntExpr {
 
         let cardset = input.parse::<CardSet>()?;
         input.parse::<kw::using>()?;
-        let point_id = (input.parse::<Ident>()?).to_string();
+        let pointmap = input.parse::<PointMap>()?;
 
-        return Ok(IntExpr::MinOf(Box::new(cardset), point_id))
+        return Ok(IntExpr::MinOf(Box::new(cardset), pointmap))
       }
       if input.peek(kw::max) && input.peek2(kw::of) {
         input.parse::<kw::max>()?;
@@ -463,9 +435,9 @@ impl Parse for IntExpr {
 
         let cardset = input.parse::<CardSet>()?;
         input.parse::<kw::using>()?;
-        let point_id = (input.parse::<Ident>()?).to_string();
+        let pointmap = input.parse::<PointMap>()?;
 
-        return Ok(IntExpr::MaxOf(Box::new(cardset), point_id))
+        return Ok(IntExpr::MaxOf(Box::new(cardset), pointmap))
       }
       if input.peek(kw::min) {
         input.parse::<kw::min>()?;
@@ -726,28 +698,29 @@ impl Parse for StringExpr {
             return Ok(expr);
         }
 
-        let id = input.parse::<Ident>()?;
-        Ok(StringExpr::ID(id.to_string()))
+        let id = input.parse::<ID>()?;
+        Ok(StringExpr::ID(id))
     }
 }
 
 fn try_parse_keyof(input: ParseStream) -> Result<StringExpr> {
     let fork = input.fork();
 
-    let key: Ident = match fork.parse::<Ident>() {
+    let key = match fork.parse::<Key>() {
         Ok(k) => k,
         Err(_) => return Err(input.error("not a KeyOf expression")),
     };
 
     fork.parse::<kw::of>()?;
 
-    let position: CardPosition = match fork.parse() {
+    let position = match fork.parse::<CardPosition>() {
         Ok(p) => p,
         Err(_) => return Err(input.error("missing CardPosition")),
     };
 
     input.advance_to(&fork);
-    Ok(StringExpr::KeyOf(key.to_string(), position))
+
+    Ok(StringExpr::KeyOf(key, position))
 }
 
 fn try_parse_collection_at(input: ParseStream) -> Result<StringExpr> {
@@ -806,43 +779,43 @@ impl Parse for FilterExpr {
       if input.peek(kw::same) {
         input.parse::<kw::same>()?;
 
-        let key = (input.parse::<Ident>()?).to_string();
+        let key = input.parse::<Key>()?;
 
         return Ok(FilterExpr::Same(key))
       }
       if input.peek(kw::distinct) {
         input.parse::<kw::distinct>()?;
 
-        let key = (input.parse::<Ident>()?).to_string();
+        let key = input.parse::<Key>()?;
 
         return Ok(FilterExpr::Distinct(key))
       }
       if input.peek(kw::adjacent) {
         input.parse::<kw::adjacent>()?;
 
-        let key = (input.parse::<Ident>()?).to_string();
+        let key = input.parse::<Key>()?;
         input.parse::<kw::using>()?;
-        let prec = (input.parse::<Ident>()?).to_string();
+        let precedence = input.parse::<Precedence>()?;
 
-        return Ok(FilterExpr::Adjacent(key, prec))
+        return Ok(FilterExpr::Adjacent(key, precedence))
       }
       if input.peek(kw::higher) {
         input.parse::<kw::higher>()?;
 
-        let key = (input.parse::<Ident>()?).to_string();
+        let key = input.parse::<Key>()?;
         input.parse::<kw::using>()?;
-        let prec = (input.parse::<Ident>()?).to_string();
+        let precedence = input.parse::<Precedence>()?;
 
-        return Ok(FilterExpr::Higher(key, prec))
+        return Ok(FilterExpr::Higher(key, precedence))
       }
       if input.peek(kw::lower) {
         input.parse::<kw::lower>()?;
 
-        let key = (input.parse::<Ident>()?).to_string();
+        let key = input.parse::<Key>()?;
         input.parse::<kw::using>()?;
-        let prec = (input.parse::<Ident>()?).to_string();
+        let precedence = input.parse::<Precedence>()?;
 
-        return Ok(FilterExpr::Lower(key, prec))
+        return Ok(FilterExpr::Lower(key, precedence))
       }
       if input.peek(kw::size) {
         input.parse::<kw::size>()?;
@@ -893,7 +866,7 @@ impl Parse for FilterExpr {
         let content;
         parenthesized!(content in input);
 
-        let key = (content.parse::<Ident>()?).to_string();
+        let key = content.parse::<Key>()?;
 
         if content.peek(Token![==]) {
           content.parse::<Token![==]>()?;
@@ -936,13 +909,13 @@ impl Parse for FilterExpr {
       if input.peek(kw::not) {
         input.parse::<kw::not>()?;
 
-        let combo = (input.parse::<Ident>()?).to_string();
+        let combo = input.parse::<Combo>()?;
 
         return Ok(FilterExpr::NotCombo(combo))
       }
 
       // last rule to match is Combo
-      let combo = (input.parse::<Ident>()?).to_string();
+      let combo = input.parse::<Combo>()?;
 
       return Ok(FilterExpr::Combo(combo))
   }
@@ -957,28 +930,28 @@ impl Parse for Group {
         }
 
         let fork = input.fork();
-        if let Ok(combo) = fork.parse::<Ident>() {
+        if let Ok(combo) = fork.parse::<Combo>() {
             if fork.peek(kw::not) {
               fork.parse::<kw::not>()?;
               fork.parse::<Token![in]>()?;
-              if let Ok(loc) = fork.parse::<LocationExpr>() {
+              if let Ok(loc) = fork.parse::<Location>() {
                   input.advance_to(&fork);
-                  return Ok(Group::NotComboInLocation(combo.to_string(), loc));
+                  return Ok(Group::NotComboInLocation(combo, loc));
               }
               if let Ok(locs) = fork.parse::<LocationCollection>() {
                   input.advance_to(&fork);
-                  return Ok(Group::NotComboInLocationCollection(combo.to_string(), locs));
+                  return Ok(Group::NotComboInLocationCollection(combo, locs));
               }
             }
             if fork.peek(Token![in]) {
                 fork.parse::<Token![in]>()?;
-                if let Ok(loc) = fork.parse::<LocationExpr>() {
+                if let Ok(loc) = fork.parse::<Location>() {
                     input.advance_to(&fork);
-                    return Ok(Group::ComboInLocation(combo.to_string(), loc));
+                    return Ok(Group::ComboInLocation(combo, loc));
                 }
                 if let Ok(locs) = fork.parse::<LocationCollection>() {
                     input.advance_to(&fork);
-                    return Ok(Group::ComboInLocationCollection(combo.to_string(), locs));
+                    return Ok(Group::ComboInLocationCollection(combo, locs));
                 }
             }
         }
@@ -1000,7 +973,7 @@ impl Parse for Group {
         }
 
         let fork = input.fork();
-        if let Ok(loc) = fork.parse::<LocationExpr>() {
+        if let Ok(loc) = fork.parse::<Location>() {
             if fork.peek(Token![where]) {
                 fork.parse::<Token![where]>()?;
                 let filter: FilterExpr = fork.parse()?;
@@ -1010,7 +983,7 @@ impl Parse for Group {
         }
 
         let fork = input.fork();
-        if let Ok(loc) = fork.parse::<LocationExpr>() {
+        if let Ok(loc) = fork.parse::<Location>() {
             input.advance_to(&fork);
             return Ok(Group::Location(loc));
         }
@@ -1068,8 +1041,8 @@ impl Parse for LocationCollection {
         let content;
         parenthesized!(content in input);
 
-        let locations: Punctuated<LocationExpr, Token![,]> =
-            content.parse_terminated(LocationExpr::parse, Token![,])?;
+        let locations: Punctuated<Location, Token![,]> =
+            content.parse_terminated(Location::parse, Token![,])?;
 
         return Ok(LocationCollection { locations: locations.into_iter().collect() })
       }
@@ -1437,7 +1410,7 @@ impl Parse for ExchangeMove {
 impl Parse for TokenLocExpr {
   fn parse(input: ParseStream) -> Result<Self> {
       let fork = input.fork();
-      if let Ok(location) = fork.parse::<LocationExpr>() {
+      if let Ok(location) = fork.parse::<Location>() {
         input.advance_to(&fork);
   
         if input.peek(kw::of) {
@@ -1520,62 +1493,70 @@ impl Parse for Rule {
         input.parse::<kw::players>()?;
         input.parse::<Token![:]>()?;
 
-        let players: Punctuated<Ident, Token![,]> =
-            input.parse_terminated(Ident::parse, Token![,])?;
+        let players: Punctuated<PlayerName, Token![,]> =
+            input.parse_terminated(PlayerName::parse, Token![,])?;
 
-        return Ok(Rule::CreatePlayer(players.into_iter().map(|p| p.to_string()).collect()))
+        return Ok(Rule::CreatePlayer(players.into_iter().collect()))
       }
       if input.peek(kw::team) {
         input.parse::<kw::team>()?;
 
-        let id = (input.parse::<Ident>()?).to_string();
+        let teamname = input.parse::<TeamName>()?;
 
         input.parse::<Token![:]>()?;
 
-        let players: Punctuated<Ident, Token![,]> =
-            input.parse_terminated(Ident::parse, Token![,])?;
+        let players: Punctuated<PlayerName, Token![,]> =
+            input.parse_terminated(PlayerName::parse, Token![,])?;
 
-        return Ok(Rule::CreateTeam(id, players.into_iter().map(|p| p.to_string()).collect()))
+        return Ok(Rule::CreateTeam(teamname, players.into_iter().collect()))
       }
       if input.peek(kw::random) && input.peek2(kw::turnorder) && input.peek3(Token![:]) {
         input.parse::<kw::random>()?;
         input.parse::<kw::turnorder>()?;
         input.parse::<Token![:]>()?;
 
-        let players: Punctuated<Ident, Token![,]> =
-            input.parse_terminated(Ident::parse, Token![,])?;
+        let players: Punctuated<PlayerName, Token![,]> =
+            input.parse_terminated(PlayerName::parse, Token![,])?;
 
-        return Ok(Rule::CreateTurnorderRandom(players.into_iter().map(|p| p.to_string()).collect()))
+        return Ok(Rule::CreateTurnorderRandom(players.into_iter().collect()))
       }
       if input.peek(kw::turnorder) && input.peek2(Token![:]) {
         input.parse::<kw::turnorder>()?;
         input.parse::<Token![:]>()?;
 
-        let players: Punctuated<Ident, Token![,]> =
-            input.parse_terminated(Ident::parse, Token![,])?;
+        let players: Punctuated<PlayerName, Token![,]> =
+            input.parse_terminated(PlayerName::parse, Token![,])?;
 
-        return Ok(Rule::CreateTurnorder(players.into_iter().map(|p| p.to_string()).collect()))
+        return Ok(Rule::CreateTurnorder(players.into_iter().collect()))
       }
       if input.peek(kw::location) {
         input.parse::<kw::location>()?;
 
-        let location = input.parse::<LocationExpr>()?;
+        let location = input.parse::<Location>()?;
 
-        let fork = input.fork();
-        if let Ok(players) = fork.parse::<PlayerCollection>() {
-          input.advance_to(&fork);
+        input.parse::<kw::on>()?;
 
-          return Ok(Rule::CreateLocationOnPlayerCollection(
-            location, players)
+        if input.peek(kw::players) {
+          input.parse::<kw::players>()?;
+
+          let playercollection = input.parse::<PlayerCollection>()?;
+          
+          return Ok(
+            Rule::CreateLocationOnPlayerCollection(
+              location, playercollection
+            )
           )
         }
 
-        let fork = input.fork();
-        if let Ok(teams) = fork.parse::<TeamCollection>() {
-          input.advance_to(&fork);
+        if input.peek(kw::teams) {
+          input.parse::<kw::teams>()?;
 
-          return Ok(Rule::CreateLocationOnTeamCollection(
-            location, teams)
+          let teamcollection = input.parse::<TeamCollection>()?;
+          
+          return Ok(
+            Rule::CreateLocationOnTeamCollection(
+              location, teamcollection
+            )
           )
         }
 
@@ -1587,7 +1568,9 @@ impl Parse for Rule {
         input.parse::<kw::card>()?;
         input.parse::<kw::on>()?;
 
-        let location= input.parse::<LocationExpr>()?;
+        let location= input.parse::<Location>()?;
+        
+      input.parse::<Token![:]>()?;
 
         let types = input.parse::<Types>()?;
 
@@ -1599,20 +1582,18 @@ impl Parse for Rule {
         input.parse::<kw::token>()?;
 
         let amount = input.parse::<IntExpr>()?;
-        let token_type = (input.parse::<Ident>()?).to_string();
+        let token_type = input.parse::<Token>()?;
         input.parse::<kw::on>()?;
-        let location = input.parse::<LocationExpr>()?;
+        let location = input.parse::<Location>()?;
 
-        let types = input.parse::<Types>()?;
-
-        return Ok(Rule::CreateCardOnLocation(
-          location, types)
-        )
+        return Ok(Rule::CreateTokenOnLocation(
+          amount, token_type, location
+        ))
       }
       if input.peek(kw::precedence) {
         input.parse::<kw::precedence>()?;
 
-        let precedence = (input.parse::<Ident>()?).to_string();
+        let precedence = input.parse::<Precedence>()?;
         
         if input.peek(kw::on) {
           input.parse::<kw::on>()?;
@@ -1629,7 +1610,7 @@ impl Parse for Rule {
       if input.peek(kw::pointmap) {
         input.parse::<kw::pointmap>()?;
 
-        let pointmap = (input.parse::<Ident>()?).to_string();
+        let pointmap = input.parse::<PointMap>()?;
         
         if input.peek(kw::on) {
           input.parse::<kw::on>()?;
@@ -1646,7 +1627,7 @@ impl Parse for Rule {
       if input.peek(kw::combo) {
         input.parse::<kw::combo>()?;
 
-        let combo = (input.parse::<Ident>()?).to_string();
+        let combo = input.parse::<Combo>()?;
         input.parse::<Token![where]>()?;
 
         let filter = input.parse::<FilterExpr>()?;
@@ -1656,7 +1637,21 @@ impl Parse for Rule {
       if input.peek(kw::memory) {
         input.parse::<kw::memory>()?;
 
-        let memory = (input.parse::<Ident>()?).to_string();
+        let memory = input.parse::<Memory>()?;
+
+        if input.peek(kw::on) {
+          input.parse::<kw::on>()?;
+
+          if input.peek(kw::table) {
+            input.parse::<kw::table>()?;
+
+            return Ok(Rule::CreateMemoryTable(memory))
+          }
+
+          let player_collection = input.parse::<PlayerCollection>()?;
+
+          return Ok(Rule::CreateMemoryPlayerCollection(memory, player_collection))                
+        }
 
         let fork = input.fork();
         if let Ok(int) = fork.parse::<IntExpr>() {
@@ -1692,7 +1687,7 @@ impl Parse for Rule {
           return Ok(Rule::CreateMemoryStringPlayerCollection(memory, string, player_collection))
         }
 
-        return Err(input.error("No CreateMemory found to parse!"))
+        return Err(input.error("CreateMemry could not been parsed!"))
       }
       if input.peek(kw::flip) {
         input.parse::<kw::flip>()?;
@@ -1732,7 +1727,7 @@ impl Parse for Rule {
           }
           if input.peek(kw::game) && input.peek2(kw::fail) {
             input.parse::<kw::game>()?;
-            input.parse::<kw::successful>()?;
+            input.parse::<kw::fail>()?;
 
             return Ok(Rule::PlayerOutOfGameFailAction(player))
           }
@@ -1759,7 +1754,7 @@ impl Parse for Rule {
           }
           if input.peek(kw::game) && input.peek2(kw::fail) {
             input.parse::<kw::game>()?;
-            input.parse::<kw::successful>()?;
+            input.parse::<kw::fail>()?;
 
             return Ok(Rule::PlayerCollectionOutOfGameFailAction(playercollection))
           }
@@ -1785,7 +1780,7 @@ impl Parse for Rule {
         if input.peek(kw::on) {
           input.parse::<kw::on>()?;
 
-          let memory = (input.parse::<Ident>()?).to_string();
+          let memory = input.parse::<Memory>()?;
 
           return Ok(Rule::BidActionMemory(memory, quantity))
         }
@@ -1804,7 +1799,7 @@ impl Parse for Rule {
 
         return Ok(Rule::EndStage)
       }
-      if input.peek(kw::end) && input.peek(kw::game) {
+      if input.peek(kw::end) && input.peek2(kw::game) {
         input.parse::<kw::end>()?;
         input.parse::<kw::game>()?;
         input.parse::<kw::with>()?;
@@ -1836,6 +1831,31 @@ impl Parse for Rule {
         }
       }
 
+      let memory = input.parse::<Memory>()?;
+
+      input.parse::<kw::is>()?;
+
+      let fork = input.fork();
+      if let Ok(collection) = fork.parse::<Collection>() {
+          input.advance_to(&fork);
+
+         return Ok(Rule::SetMemoryCollection(memory, collection))
+      }
+      
+      let fork = input.fork();
+      if let Ok(int) = fork.parse::<IntExpr>() {
+          input.advance_to(&fork);
+
+         return Ok(Rule::SetMemoryInt(memory, int))
+      }
+
+      let fork = input.fork();
+      if let Ok(string) = fork.parse::<StringExpr>() {
+          input.advance_to(&fork);
+
+         return Ok(Rule::SetMemoryString(memory, string))
+      }
+      
       return Err(input.error("No Rule found to parse!"))
   }
 }
@@ -1845,15 +1865,15 @@ impl Parse for Types {
 
       let mut types = Vec::new();
 
-      let key = (input.parse::<Ident>()?).to_string();
+      let key = input.parse::<Key>()?;
       
       let content;
       parenthesized!(content in input);
 
-      let values: Punctuated<Ident, Token![,]> =
-        content.parse_terminated(Ident::parse, Token![,])?;
+      let values: Punctuated<Value, Token![,]> =
+        content.parse_terminated(Value::parse, Token![,])?;
 
-      types.push((key, values.iter().map(|v| v.to_string()).collect()));
+      types.push((key, values.into_iter().collect()));
 
       if input.peek(Token![for]) {
         input.parse::<Token![for]>()?;
@@ -1868,15 +1888,15 @@ impl Parse for Types {
 
 impl Parse for OnKeyPrec {
   fn parse(input: ParseStream) -> Result<Self> {
-      let key = (input.parse::<Ident>()?).to_string();
+      let key = input.parse::<Key>()?;
 
       let content;
       parenthesized!(content in input);
 
-      let values: Punctuated<Ident, Token![,]> =
-        content.parse_terminated(Ident::parse, Token![,])?;
+      let values: Punctuated<Value, Token![,]> =
+        content.parse_terminated(Value::parse, Token![,])?;
 
-      return Ok(OnKeyPrec { key, values: values.into_iter().map(|v| v.to_string()).collect()})   
+      return Ok(OnKeyPrec { key, values: values.into_iter().collect()})   
   }
 }
 
@@ -1887,14 +1907,20 @@ impl Parse for KeyValuePairs {
 
       let mut key_value_vec = Vec::new();
       while !content.is_empty() {
-        let key = (content.parse::<Ident>()?).to_string();
+        let key = content.parse::<Key>()?;
 
         let in_content;
         parenthesized!(in_content in content);
 
-        let value = (content.parse::<Ident>()?).to_string();
+        let value = in_content.parse::<Value>()?;
 
         key_value_vec.push((key, value));
+
+        if content.peek(Token![,]) {
+          content.parse::<Token![,]>()?;
+        } else {
+          break
+        }
       }
 
       return Ok(KeyValuePairs { key_value: key_value_vec })
@@ -1903,7 +1929,7 @@ impl Parse for KeyValuePairs {
 
 impl Parse for ValueIntPair {
   fn parse(input: ParseStream) -> Result<Self> {
-      let value = (input.parse::<Ident>()?).to_string();
+      let value = input.parse::<Value>()?;
       input.parse::<Token![:]>()?;
       let int = input.parse::<IntExpr>()?;
 
@@ -1913,7 +1939,7 @@ impl Parse for ValueIntPair {
 
 impl Parse for OnKeyPoint {
   fn parse(input: ParseStream) -> Result<Self> {
-      let key = (input.parse::<Ident>()?).to_string();
+      let key = input.parse::<Key>()?;
 
       let content;
       parenthesized!(content in input);
@@ -1932,16 +1958,22 @@ impl Parse for KeyValueInt {
 
       let mut key_value_int_vec = Vec::new();
       while !content.is_empty() {
-        let key = (input.parse::<Ident>()?).to_string();
+        let key = content.parse::<Key>()?;
           
         let in_content;
         parenthesized!(in_content in content);
 
-        let value = (in_content.parse::<Ident>()?).to_string();
+        let value = in_content.parse::<Value>()?;
         in_content.parse::<Token![:]>()?;
         let int = in_content.parse::<IntExpr>()?;
 
         key_value_int_vec.push((key, value, int));
+
+        if content.peek(Token![,]) {
+          content.parse::<Token![,]>()?;
+        } else {
+          break
+        }
       }
       
       return Ok(KeyValueInt { key_value_int_vec: key_value_int_vec })
