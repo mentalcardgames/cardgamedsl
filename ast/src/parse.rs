@@ -3,7 +3,7 @@ use crate::ast::*;
 use syn::parse::discouraged::Speculative;
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
-use syn::{LitInt, Token, bracketed, parenthesized};
+use syn::{LitInt, Token, braced, bracketed, parenthesized};
 
 
 // ------------------------
@@ -11,6 +11,8 @@ use syn::{LitInt, Token, bracketed, parenthesized};
 // ------------------------
 
 mod kw {
+  syn::custom_keyword!(choose);
+  syn::custom_keyword!(optional);
   syn::custom_keyword!(next);
   syn::custom_keyword!(turn);
   syn::custom_keyword!(winner);
@@ -1493,8 +1495,11 @@ impl Parse for Rule {
         input.parse::<kw::players>()?;
         input.parse::<Token![:]>()?;
 
+        let content;
+        parenthesized!(content in input);
+
         let players: Punctuated<PlayerName, Token![,]> =
-            input.parse_terminated(PlayerName::parse, Token![,])?;
+            content.parse_terminated(PlayerName::parse, Token![,])?;
 
         return Ok(Rule::CreatePlayer(players.into_iter().collect()))
       }
@@ -1505,8 +1510,11 @@ impl Parse for Rule {
 
         input.parse::<Token![:]>()?;
 
+        let content;
+        parenthesized!(content in input);
+
         let players: Punctuated<PlayerName, Token![,]> =
-            input.parse_terminated(PlayerName::parse, Token![,])?;
+            content.parse_terminated(PlayerName::parse, Token![,])?;
 
         return Ok(Rule::CreateTeam(teamname, players.into_iter().collect()))
       }
@@ -1515,8 +1523,11 @@ impl Parse for Rule {
         input.parse::<kw::turnorder>()?;
         input.parse::<Token![:]>()?;
 
+        let content;
+        parenthesized!(content in input);
+
         let players: Punctuated<PlayerName, Token![,]> =
-            input.parse_terminated(PlayerName::parse, Token![,])?;
+            content.parse_terminated(PlayerName::parse, Token![,])?;
 
         return Ok(Rule::CreateTurnorderRandom(players.into_iter().collect()))
       }
@@ -1524,13 +1535,51 @@ impl Parse for Rule {
         input.parse::<kw::turnorder>()?;
         input.parse::<Token![:]>()?;
 
+        let content;
+        parenthesized!(content in input);
+
         let players: Punctuated<PlayerName, Token![,]> =
-            input.parse_terminated(PlayerName::parse, Token![,])?;
+            content.parse_terminated(PlayerName::parse, Token![,])?;
 
         return Ok(Rule::CreateTurnorder(players.into_iter().collect()))
       }
       if input.peek(kw::location) {
         input.parse::<kw::location>()?;
+
+        let fork = input.fork();
+        if let Ok(locationcollection) = fork.parse::<LocationCollection>() {
+          input.advance_to(&fork);
+
+          input.parse::<kw::on>()?;
+
+          if input.peek(kw::players) {
+            input.parse::<kw::players>()?;
+
+            let playercollection = input.parse::<PlayerCollection>()?;
+            
+            return Ok(
+              Rule::CreateLocationCollectionOnPlayerCollection(
+                locationcollection, playercollection
+              )
+            )
+          }
+
+          if input.peek(kw::teams) {
+            input.parse::<kw::teams>()?;
+
+            let teamcollection = input.parse::<TeamCollection>()?;
+            
+            return Ok(
+              Rule::CreateLocationCollectionOnTeamCollection(
+                locationcollection, teamcollection
+              )
+            )
+          }
+
+          input.parse::<kw::table>()?;
+
+          return Ok(Rule::CreateLocationCollectionOnTable(locationcollection))
+        }
 
         let location = input.parse::<Location>()?;
 
@@ -1977,5 +2026,131 @@ impl Parse for KeyValueInt {
       }
       
       return Ok(KeyValueInt { key_value_int_vec: key_value_int_vec })
+  }
+}
+
+impl Parse for SeqStage {
+  fn parse(input: ParseStream) -> Result<Self> {
+      input.parse::<kw::stage>()?;
+      let stage = input.parse::<Stage>()?;
+
+      input.parse::<Token![for]>()?;
+      let player = input.parse::<PlayerExpr>()?;
+      let endcondition = input.parse::<EndCondition>()?;
+
+      let content;
+      braced!(content in input);
+
+      let mut flows = Vec::new();
+      while !content.is_empty() {
+        let flow = content.parse::<FlowComponent>()?;
+
+        flows.push(flow);
+      }
+
+      return Ok(SeqStage {
+        stage: stage,
+        player: player,
+        end_condition: endcondition,
+        flows: flows
+      })
+  }
+}
+
+impl Parse for IfRule {
+  fn parse(input: ParseStream) -> Result<Self> {
+      input.parse::<Token![if]>()?;
+
+      let content;
+      parenthesized!(content in input);
+
+      let condition = content.parse::<BoolExpr>()?;
+
+      let content;
+      braced!(content in input);
+
+      let mut flows = Vec::new();
+      while !content.is_empty() {
+        let flow = content.parse::<FlowComponent>()?;
+
+        flows.push(flow);
+      }
+
+      return Ok(IfRule { condition, flows })
+  }
+}
+
+impl Parse for OptionalRule {
+  fn parse(input: ParseStream) -> Result<Self> {
+      input.parse::<kw::optional>()?;
+      
+      let content;
+      braced!(content in input);
+
+      let mut flows = Vec::new();
+      while !content.is_empty() {
+        let flow = content.parse::<FlowComponent>()?;
+
+        flows.push(flow);
+      }
+
+      return Ok(OptionalRule { flows })
+  }
+}
+
+impl Parse for ChoiceRule {
+  fn parse(input: ParseStream) -> Result<Self> {
+      input.parse::<kw::choose>()?;
+
+      let content;
+      braced!(content in input);
+
+      let options: Punctuated<FlowComponent, kw::or> =
+        content.parse_terminated(FlowComponent::parse, kw::or)?;
+
+      return Ok(ChoiceRule { options: options.into_iter().collect() })
+  }
+}
+
+impl Parse for FlowComponent {
+  fn parse(input: ParseStream) -> Result<Self> {
+      if input.peek(kw::stage) {
+        let stage = input.parse::<SeqStage>()?;
+
+        return Ok(FlowComponent::Stage(stage))
+      }
+      if input.peek(Token![if]) {
+        let ifrule = input.parse::<IfRule>()?;
+
+        return Ok(FlowComponent::IfRule(ifrule))
+      }
+      if input.peek(kw::choose) {
+        let choicerule = input.parse::<ChoiceRule>()?;
+
+        return Ok(FlowComponent::ChoiceRule(choicerule))
+      }
+      if input.peek(kw::optional) {
+        let optionalrule = input.parse::<OptionalRule>()?;
+
+        return Ok(FlowComponent::OptionalRule(optionalrule))
+      }
+
+      let rule = input.parse::<Rule>()?;
+      input.parse::<Token![;]>()?;
+
+      return Ok(FlowComponent::Rule(rule))
+  }
+}
+
+impl Parse for Game {
+  fn parse(input: ParseStream) -> Result<Self> {
+      let mut flows = Vec::new();
+      while !input.is_empty() {
+        let flow = input.parse::<FlowComponent>()?;
+
+        flows.push(flow);
+      }
+
+      return Ok(Game { flows })
   }
 }

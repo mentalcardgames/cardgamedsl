@@ -230,7 +230,10 @@ pub struct Game {
 #[derive(Debug, PartialEq)]
 pub enum FlowComponent {
     Stage(SeqStage),
-    Rule(Rule)
+    Rule(Rule),
+    IfRule(IfRule),
+    ChoiceRule(ChoiceRule),
+    OptionalRule(OptionalRule),
 }
 
 #[derive(Debug, PartialEq)]
@@ -257,6 +260,9 @@ pub enum Rule {
     CreateLocationOnPlayerCollection(Location, PlayerCollection),
     CreateLocationOnTeamCollection(Location, TeamCollection),
     CreateLocationOnTable(Location),
+    CreateLocationCollectionOnPlayerCollection(LocationCollection, PlayerCollection),
+    CreateLocationCollectionOnTeamCollection(LocationCollection, TeamCollection),
+    CreateLocationCollectionOnTable(LocationCollection),
     CreateCardOnLocation(Location, Types),
     CreateTokenOnLocation(IntExpr, Token, Location),
     CreatePrecedence(Precedence, OnKeyPrec),
@@ -333,26 +339,26 @@ pub struct KeyValueInt {
 
 #[derive(Debug, PartialEq)]
 pub struct SeqStage {
-    id: String,
-    player: PlayerExpr,
-    end_condition: EndCondition,
-    flows: Vec<FlowComponent>,
+    pub stage: Stage,
+    pub player: PlayerExpr,
+    pub end_condition: EndCondition,
+    pub flows: Vec<FlowComponent>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct IfRule {
-    condition: BoolExpr,
-    flows: Vec<FlowComponent>,
+    pub condition: BoolExpr,
+    pub flows: Vec<FlowComponent>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct OptionalRule {
-    flows: Vec<FlowComponent>
+    pub flows: Vec<FlowComponent>
 }
 
 #[derive(Debug, PartialEq)]
 pub struct ChoiceRule {
-    options: Vec<FlowComponent>
+    pub options: Vec<FlowComponent>
 }
 
 #[derive(Debug, PartialEq)]

@@ -1706,9 +1706,9 @@ mod tests {
     // Rule ==================================================================
 
     #[test]
-    fn parses_valid_rule_createplayer() {
+    fn parses_valid_rule_createplayers() {
         let parsed: Rule = parse_str(
-          "players: P1, P2, P3"
+          "players: (P1, P2, P3)"
         ).unwrap();
         assert_eq!(parsed,
           Rule::CreatePlayer(
@@ -1724,7 +1724,7 @@ mod tests {
     #[test]
     fn parses_valid_rule_createteam() {
         let parsed: Rule = parse_str(
-          "team T1: P1, P2, P3"
+          "team T1: (P1, P2, P3)"
         ).unwrap();
         assert_eq!(parsed,
           Rule::CreateTeam(
@@ -1741,10 +1741,26 @@ mod tests {
     #[test]
     fn parses_valid_rule_createturnorder() {
         let parsed: Rule = parse_str(
-          "turnorder: P1, P2, P3"
+          "turnorder: (P1, P2, P3)"
         ).unwrap();
         assert_eq!(parsed,
           Rule::CreateTurnorder(
+            vec![
+              format_ident!("P1"),
+              format_ident!("P2"),
+              format_ident!("P3"),
+            ]
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_rule_createturnorder_random() {
+        let parsed: Rule = parse_str(
+          "random turnorder: (P1, P2, P3)"
+        ).unwrap();
+        assert_eq!(parsed,
+          Rule::CreateTurnorderRandom(
             vec![
               format_ident!("P1"),
               format_ident!("P2"),
@@ -2403,5 +2419,276 @@ mod tests {
 
     // =======================================================================
 
+    // SeqStage ==============================================================
+
+    #[test]
+    fn parses_valid_seq_stage() {
+        let parsed: SeqStage = parse_str(
+          "
+            stage Play for current until end {
+              cycle to current;
+            }
+          "
+        ).unwrap();
+        assert_eq!(parsed,
+          SeqStage {
+            stage: format_ident!("Play"),
+            player: PlayerExpr::Current,
+            end_condition: EndCondition::UntilEnd,
+            flows: vec![
+              FlowComponent::Rule(
+                Rule::CycleAction(
+                  PlayerExpr::Current
+                )
+              )
+            ]
+          }
+        );
+    }
+
+    // =======================================================================
+
+    // IfRule ================================================================
+
+    #[test]
+    fn parses_valid_if_rule() {
+        let parsed: IfRule = parse_str(
+          "
+            if (current out of stage) {
+              cycle to next;
+            }
+          "
+        ).unwrap();
+        assert_eq!(parsed,
+          IfRule {
+            condition: BoolExpr::OutOfStagePlayer(PlayerExpr::Current),
+            flows: vec![
+              FlowComponent::Rule(
+                Rule::CycleAction(
+                  PlayerExpr::Next
+                )
+              )
+            ]
+          }
+        );
+    }
+
+    // =======================================================================
+
+    // OptionalRule ==========================================================
+
+    #[test]
+    fn parses_valid_optional_rule() {
+        let parsed: OptionalRule = parse_str(
+          "
+            optional {
+              end turn;
+            }
+          "
+        ).unwrap();
+        assert_eq!(parsed,
+          OptionalRule {
+            flows: vec![
+              FlowComponent::Rule(
+                Rule::EndTurn
+              )
+            ]
+          }
+        );
+    }
+
+    // =======================================================================
+
+    // ChoiceRule ============================================================
+
+    #[test]
+    fn parses_valid_choice_rule() {
+        let parsed: ChoiceRule = parse_str(
+          "
+            choose {
+              end turn;
+              or
+              optional {
+                end stage;
+              } 
+            }
+          "
+        ).unwrap();
+        assert_eq!(parsed,
+          ChoiceRule {
+            options: vec![
+              FlowComponent::Rule(
+                Rule::EndTurn
+              ),
+              FlowComponent::OptionalRule(
+                OptionalRule {
+                  flows: vec![
+                      FlowComponent::Rule(
+                        Rule::EndStage
+                      )
+                  ]
+                }
+              ),
+            ]
+          }
+        );
+    }
+
+    // =======================================================================
+
+    // FlowComponent =========================================================
+
+    #[test]
+    fn parses_valid_flow_component_choice_rule() {
+        let parsed: FlowComponent = parse_str(
+          "
+            choose {
+              end turn;
+              or
+              optional {
+                end stage;
+              } 
+            }
+          "
+        ).unwrap();
+        assert_eq!(parsed,
+          FlowComponent::ChoiceRule(
+            ChoiceRule {
+              options: vec![
+                FlowComponent::Rule(
+                  Rule::EndTurn
+                ),
+                FlowComponent::OptionalRule(
+                  OptionalRule {
+                    flows: vec![
+                        FlowComponent::Rule(
+                          Rule::EndStage
+                        )
+                    ]
+                  }
+                ),
+              ]
+            }
+          )
+        );
+    }
+
+    #[test]
+    fn parses_valid_flow_component_rule() {
+        let parsed: FlowComponent = parse_str(
+          "
+            end turn;
+          "
+        ).unwrap();
+        assert_eq!(parsed,
+          FlowComponent::Rule(
+            Rule::EndTurn
+          )
+        );
+    }
+
+    // =======================================================================
+
+    // Game ==================================================================
+
+    // TODO
+
+    #[test]
+    fn parses_valid_game() {
+        let parsed: Game = parse_str(
+          "
+            players: (P1, P2, P3);
+            turnorder: (P1, P2, P3);
+            location (hand, laydown, trash) on players all;
+            location (stock, discard) on table;
+            card on stock:
+              Rank(Two, Three, Four, Five, Six, Seven, Eight, Nine , Ten, Jack, Queen, King, Ace)
+                for Suite(Diamonds, Hearts, Spades, Clubs);
+          "
+        ).unwrap();
+        assert_eq!(parsed,
+          Game {
+            flows: vec![
+              // create players
+              FlowComponent::Rule(
+                Rule::CreatePlayer(
+                  vec![
+                    format_ident!("P1"),
+                    format_ident!("P2"),
+                    format_ident!("P3"),
+                  ]
+                )
+              ),
+              // create turnorder
+              FlowComponent::Rule(
+                Rule::CreateTurnorder(
+                  vec![
+                    format_ident!("P1"),
+                    format_ident!("P2"),
+                    format_ident!("P3"),
+                  ]
+                )
+              ),
+              // location on all
+              FlowComponent::Rule(
+                Rule::CreateLocationCollectionOnPlayerCollection(
+                  LocationCollection {
+                    locations: vec![
+                      format_ident!("hand"),
+                      format_ident!("laydown"),
+                      format_ident!("trash"),
+                    ]
+                  },
+                  PlayerCollection::Quantifier(Quantifier::All)
+                )
+              ),
+              // location on table
+              FlowComponent::Rule(
+                Rule::CreateLocationCollectionOnTable(
+                  LocationCollection {
+                    locations: vec![
+                      format_ident!("stock"),
+                      format_ident!("discard"),
+                    ]
+                  }
+                )
+              ),
+              // card on
+              FlowComponent::Rule(
+                Rule::CreateCardOnLocation(
+                  format_ident!("stock"),
+                  Types {
+                    types: vec![
+                      (format_ident!("Rank"), vec![
+                        format_ident!("Two"),
+                        format_ident!("Three"),
+                        format_ident!("Four"),
+                        format_ident!("Five"),
+                        format_ident!("Six"),
+                        format_ident!("Seven"),
+                        format_ident!("Eight"),
+                        format_ident!("Nine"),
+                        format_ident!("Ten"),
+                        format_ident!("Jack"),
+                        format_ident!("Queen"),
+                        format_ident!("King"),
+                        format_ident!("Ace")
+                      ]),
+                      (format_ident!("Suite"), vec![
+                        format_ident!("Diamonds"),
+                        format_ident!("Hearts"),
+                        format_ident!("Spades"),
+                        format_ident!("Clubs"),
+                      ]),
+                    ]
+                  }
+                )
+              )
+            ]
+          }
+        );
+    }
+
+    // =======================================================================
 
 }
