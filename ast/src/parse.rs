@@ -11,6 +11,8 @@ use syn::{LitInt, Token, braced, bracketed, parenthesized};
 // ------------------------
 
 mod kw {
+  syn::custom_keyword!(position);
+  syn::custom_keyword!(score);
   syn::custom_keyword!(choose);
   syn::custom_keyword!(optional);
   syn::custom_keyword!(next);
@@ -294,27 +296,34 @@ impl Parse for TeamExpr {
 
 impl Parse for CardPosition {
   fn parse(input: ParseStream) -> Result<Self> {
-      if input.peek(kw::top) && input.peek2(kw::of) {
+      if input.peek(kw::top) {
         input.parse::<kw::top>()?;
-        input.parse::<kw::of>()?;
+        
+        let content;
+        parenthesized!(content in input);
 
-        let location = input.parse::<Location>()?;
+        let location = content.parse::<Location>()?;
 
         return Ok(CardPosition::Top(location))
       }
-      if input.peek(kw::bottom) && input.peek2(kw::of) {
+      if input.peek(kw::bottom) {
         input.parse::<kw::bottom>()?;
-        input.parse::<kw::of>()?;
+        
+        let content;
+        parenthesized!(content in input);
 
-        let location = input.parse::<Location>()?;
+        let location = content.parse::<Location>()?;
 
         return Ok(CardPosition::Bottom(location))
       }
-      if input.peek(kw::max) && input.peek2(kw::of) {
+      if input.peek(kw::max) {
         input.parse::<kw::max>()?;
-        input.parse::<kw::of>()?;
+        
+        let content;
+        parenthesized!(content in input);
 
-        let cardset = input.parse::<CardSet>()?;
+
+        let cardset = content.parse::<CardSet>()?;
 
         if input.peek(kw::using) && input.peek2(kw::prec) {
           input.parse::<kw::using>()?;
@@ -342,11 +351,13 @@ impl Parse for CardPosition {
 
         return Err(input.error("No Precedence or PointMap found to parse!"))
       }
-      if input.peek(kw::min) && input.peek2(kw::of) {
+      if input.peek(kw::min) {
         input.parse::<kw::min>()?;
-        input.parse::<kw::of>()?;
 
-        let cardset = input.parse::<CardSet>()?;
+        let content;
+        parenthesized!(content in input);
+
+        let cardset = content.parse::<CardSet>()?;
 
         if input.peek(kw::using) && input.peek2(kw::prec) {
           input.parse::<kw::using>()?;
@@ -1212,39 +1223,43 @@ impl Parse for EndCondition {
   fn parse(input: ParseStream) -> Result<Self> {
       input.parse::<kw::until>()?;
 
-      if input.peek(kw::end) {
-        input.parse::<kw::end>()?;
+      let content;
+      parenthesized!(content in input);
+
+
+      if content.peek(kw::end) {
+        content.parse::<kw::end>()?;
 
         return Ok(EndCondition::UntilEnd)
       }
 
-      let fork = input.fork();
+      let fork = content.fork();
+      if let Ok(reps) = fork.parse::<Repititions>() {
+        content.advance_to(&fork);
+
+        return Ok(EndCondition::UntilRep(reps))
+      }
+
+      let fork = content.fork();
       if let Ok(boolexpr) = fork.parse::<BoolExpr>() {
-        input.advance_to(&fork);
+        content.advance_to(&fork);
 
-        if input.peek(kw::and) {
-          input.parse::<kw::and>()?;
+        if content.peek(kw::and) {
+          content.parse::<kw::and>()?;
 
-          let reps = input.parse::<Repititions>()?;
+          let reps = content.parse::<Repititions>()?;
 
           return Ok(EndCondition::UntilBoolAndRep(boolexpr, reps))
         }
-        if input.peek(kw::or) {
-          input.parse::<kw::or>()?;
+        if content.peek(kw::or) {
+          content.parse::<kw::or>()?;
 
-          let reps = input.parse::<Repititions>()?;
+          let reps = content.parse::<Repititions>()?;
 
           return Ok(EndCondition::UntilBoolOrRep(boolexpr, reps))
         }
 
         return Ok(EndCondition::UntilBool(boolexpr))
-      }
-
-      let fork = input.fork();
-      if let Ok(reps) = fork.parse::<Repititions>() {
-        input.advance_to(&fork);
-
-        return Ok(EndCondition::UntilRep(reps))
       }
 
       return Err(input.error("EndCondition could not been parsed!"))
@@ -1879,6 +1894,36 @@ impl Parse for Rule {
           return Ok(Rule::DemandIntAction(int))
         }
       }
+      if input.peek(kw::deal) {
+        let dealmove = input.parse::<DealMove>()?;
+
+        return Ok(Rule::DealMove(dealmove))
+      }
+      if input.peek(Token![move]) {
+        let classicmove = input.parse::<ClassicMove>()?;
+
+        return Ok(Rule::ClassicMove(classicmove))
+      }
+      if input.peek(kw::exchange) {
+        let exchange = input.parse::<ExchangeMove>()?;
+
+        return Ok(Rule::ExchangeMove(exchange))
+      }
+      if input.peek(kw::place) {
+        let tokenmove = input.parse::<TokenMove>()?;
+
+        return Ok(Rule::TokenMove(tokenmove))
+      }
+      if input.peek(kw::score) {
+        let scorerule = input.parse::<ScoreRule>()?;
+
+        return Ok(Rule::ScoreRule(scorerule))
+      }
+      if input.peek(kw::winner) && input.peek2(kw::is) {
+        let winnerrule = input.parse::<WinnerRule>()?;
+
+        return Ok(Rule::WinnerRule(winnerrule))
+      }
 
       let memory = input.parse::<Memory>()?;
 
@@ -2026,6 +2071,101 @@ impl Parse for KeyValueInt {
       }
       
       return Ok(KeyValueInt { key_value_int_vec: key_value_int_vec })
+  }
+}
+
+impl Parse for ScoreRule {
+  fn parse(input: ParseStream) -> Result<Self> {
+      input.parse::<kw::score>()?;
+
+      let int = input.parse::<IntExpr>()?;
+
+      if input.peek(kw::to) {
+        input.parse::<kw::to>()?;
+
+        let memory = input.parse::<Memory>()?;
+
+        input.parse::<kw::of>()?;
+
+        let fork = input.fork();
+        if let Ok(playercollection) = fork.parse::<PlayerCollection>() {
+          input.advance_to(&fork);
+
+          return Ok(ScoreRule::ScorePlayerCollectionMemory(int, memory, playercollection))
+        }
+
+        let fork = input.fork();
+        if let Ok(player) = fork.parse::<PlayerExpr>() {
+          input.advance_to(&fork);
+
+          return Ok(ScoreRule::ScorePlayerMemory(int, memory, player))
+        }
+      }
+
+      input.parse::<kw::of>()?;
+
+      let fork = input.fork();
+      if let Ok(playercollection) = fork.parse::<PlayerCollection>() {
+        input.advance_to(&fork);
+
+        return Ok(ScoreRule::ScorePlayerCollection(int, playercollection))
+      }
+
+      let fork = input.fork();
+      if let Ok(player) = fork.parse::<PlayerExpr>() {
+        input.advance_to(&fork);
+
+        return Ok(ScoreRule::ScorePlayer(int, player))
+      }
+
+      return Err(input.error("ScoreRule could not been parsed!"))
+  }
+}
+
+impl Parse for WinnerRule {
+  fn parse(input: ParseStream) -> Result<Self> {
+      input.parse::<kw::winner>()?;
+      input.parse::<kw::is>()?;
+
+      if input.peek(kw::lowest) {
+        input.parse::<kw::lowest>()?;
+
+        if input.peek(kw::score) {
+          input.parse::<kw::score>()?;
+
+          return Ok(WinnerRule::WinnerLowestScore)
+        }
+        if input.peek(kw::position) {
+          input.parse::<kw::position>()?;
+
+          return Ok(WinnerRule::WinnerLowestPosition)
+        }
+        
+        let memory = input.parse::<Memory>()?;
+
+        return Ok(WinnerRule::WinnerLowestMemory(memory))
+      }
+
+      if input.peek(kw::highest) {
+        input.parse::<kw::highest>()?;
+
+        if input.peek(kw::score) {
+          input.parse::<kw::score>()?;
+
+          return Ok(WinnerRule::WinnerHighestScore)
+        }
+        if input.peek(kw::position) {
+          input.parse::<kw::position>()?;
+
+          return Ok(WinnerRule::WinnerHighestPosition)
+        }
+        
+        let memory = input.parse::<Memory>()?;
+
+        return Ok(WinnerRule::WinnerHighestMemory(memory))
+      }
+
+      return Err(input.error("No WinningRule found to parse!"))
   }
 }
 

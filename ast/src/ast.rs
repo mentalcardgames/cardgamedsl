@@ -302,6 +302,9 @@ pub enum Rule {
     DealMove(DealMove),
     ExchangeMove(ExchangeMove),
     TokenMove(TokenMove),
+    // Score + Winner Rule
+    ScoreRule(ScoreRule),
+    WinnerRule(WinnerRule)
 }
 
 #[derive(Debug, PartialEq)]
@@ -403,3 +406,14 @@ pub enum ScoreRule {
     ScorePlayerCollectionMemory(IntExpr, Memory, PlayerCollection),
 }
 
+#[derive(Debug, PartialEq)]
+pub enum WinnerRule {
+    WinnerPlayer(PlayerExpr),
+    WinnerPlayerCollection(PlayerCollection),
+    WinnerLowestScore,
+    WinnerHighestScore,
+    WinnerLowestMemory(Memory),
+    WinnerHighestMemory(Memory),
+    WinnerLowestPosition,
+    WinnerHighestPosition,   
+}

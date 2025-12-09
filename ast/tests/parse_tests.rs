@@ -232,7 +232,7 @@ mod tests {
     #[test]
     fn parses_valid_cardposition_top_of() {
         let parsed: CardPosition = parse_str(
-          "top of hand"
+          "top(hand)"
         ).unwrap();
         assert_eq!(parsed, CardPosition::Top(format_ident!("hand")));
     }
@@ -240,7 +240,7 @@ mod tests {
     #[test]
     fn parses_valid_cardposition_bottom_of() {
         let parsed: CardPosition = parse_str(
-          "bottom of hand"
+          "bottom(hand)"
         ).unwrap();
         assert_eq!(parsed, CardPosition::Bottom(format_ident!("hand")));
     }
@@ -248,7 +248,7 @@ mod tests {
     #[test]
     fn parses_valid_cardposition_max_of_using_prec() {
         let parsed: CardPosition = parse_str(
-          "max of hand using prec(aces)"
+          "max(hand) using prec(aces)"
         ).unwrap();
         assert_eq!(parsed, CardPosition::MaxPrec(Box::new(CardSet::Group(Group::Location(format_ident!("hand")))), format_ident!("aces")));
     }
@@ -256,7 +256,7 @@ mod tests {
     #[test]
     fn parses_valid_cardposition_min_of_using_prec() {
         let parsed: CardPosition = parse_str(
-          "min of hand using prec(aces)"
+          "min(hand) using prec(aces)"
         ).unwrap();
         assert_eq!(parsed, CardPosition::MinPrec(Box::new(CardSet::Group(Group::Location(format_ident!("hand")))), format_ident!("aces")));
     }
@@ -264,7 +264,7 @@ mod tests {
     #[test]
     fn parses_valid_cardposition_max_of_using_point() {
         let parsed: CardPosition = parse_str(
-          "max of hand using point(aces)"
+          "max(hand) using point(aces)"
         ).unwrap();
         assert_eq!(parsed, CardPosition::MaxPoint(Box::new(CardSet::Group(Group::Location(format_ident!("hand")))), format_ident!("aces")));
     }
@@ -272,7 +272,7 @@ mod tests {
     #[test]
     fn parses_valid_cardposition_min_of_using_point() {
         let parsed: CardPosition = parse_str(
-          "min of hand using point(aces)"
+          "min(hand) using point(aces)"
         ).unwrap();
         assert_eq!(parsed, CardPosition::MinPoint(Box::new(CardSet::Group(Group::Location(format_ident!("hand")))), format_ident!("aces")));
     }
@@ -589,7 +589,7 @@ mod tests {
     #[test]
     fn parses_valid_stringexpr_key_of() {
         let parsed: StringExpr = parse_str(
-          "rank of top of hand"
+          "rank of top(hand)"
         ).unwrap();
         assert_eq!(parsed, StringExpr::KeyOf(
           format_ident!("rank"),
@@ -1001,7 +1001,7 @@ mod tests {
     #[test]
     fn parses_valid_group_cardposition() {
         let parsed: Group = parse_str(
-          "top of hand"
+          "top(hand)"
         ).unwrap();
         assert_eq!(parsed, 
           Group::CardPosition(
@@ -1017,7 +1017,7 @@ mod tests {
     #[test]
     fn parses_valid_cardset_group() {
         let parsed: CardSet = parse_str(
-          "top of hand"
+          "top(hand)"
         ).unwrap();
         assert_eq!(parsed, 
           CardSet::Group(
@@ -1289,7 +1289,7 @@ mod tests {
     #[test]
     fn parses_valid_endcondition_until_end() {
         let parsed: EndCondition = parse_str(
-          "until end"
+          "until(end)"
         ).unwrap();
         assert_eq!(parsed,
           EndCondition::UntilEnd
@@ -1299,7 +1299,7 @@ mod tests {
     #[test]
     fn parses_valid_endcondition_until_reps() {
         let parsed: EndCondition = parse_str(
-          "until 3 times"
+          "until(3 times)"
         ).unwrap();
         assert_eq!(parsed,
           EndCondition::UntilRep(
@@ -1313,7 +1313,7 @@ mod tests {
     #[test]
     fn parses_valid_endcondition_until_bool() {
         let parsed: EndCondition = parse_str(
-          "until 3 == 2"
+          "until(3 == 2)"
         ).unwrap();
         assert_eq!(parsed,
           EndCondition::UntilBool(
@@ -1325,7 +1325,7 @@ mod tests {
     #[test]
     fn parses_valid_endcondition_until_bool_and_rep() {
         let parsed: EndCondition = parse_str(
-          "until 3 == 2 and 3 times"
+          "until(3 == 2 and 3 times)"
         ).unwrap();
         assert_eq!(parsed,
           EndCondition::UntilBoolAndRep(
@@ -1340,7 +1340,7 @@ mod tests {
     #[test]
     fn parses_valid_endcondition_until_bool_or_rep() {
         let parsed: EndCondition = parse_str(
-          "until 3 == 2 or 3 times"
+          "until(3 == 2 or 3 times)"
         ).unwrap();
         assert_eq!(parsed,
           EndCondition::UntilBoolOrRep(
@@ -1522,14 +1522,14 @@ mod tests {
     #[test]
     fn parses_valid_dealmove_deal_quantity() {
         let parsed: DealMove = parse_str(
-          "deal all from hand private to deck"
+          "deal 12 from hand private to deck of all"
         ).unwrap();
         assert_eq!(parsed,
           DealMove::DealQuantity(
-            Quantity::Quantifier(Quantifier::All),
+            Quantity::Int(IntExpr::Int(12)),
             CardSet::Group(Group::Location(format_ident!("hand"))),
             Status::Private,
-            CardSet::Group(Group::Location(format_ident!("deck")))
+            CardSet::GroupOfPlayerCollection(Group::Location(format_ident!("deck")), PlayerCollection::Quantifier(Quantifier::All))
           )
         );
     }
@@ -2380,7 +2380,7 @@ mod tests {
     #[test]
     fn parses_valid_rule_demand_card_position() {
         let parsed: Rule = parse_str(
-          "demand top of hand"
+          "demand top(hand)"
         ).unwrap();
         assert_eq!(parsed,
           Rule::DemandCardPositionAction(
@@ -2425,23 +2425,28 @@ mod tests {
     fn parses_valid_seq_stage() {
         let parsed: SeqStage = parse_str(
           "
-            stage Play for current until end {
-              cycle to current;
+            stage Play for current until(1 times) {
+              deal 12 from stock private to hand of all;
             }
           "
         ).unwrap();
         assert_eq!(parsed,
           SeqStage {
-            stage: format_ident!("Play"),
-            player: PlayerExpr::Current,
-            end_condition: EndCondition::UntilEnd,
+            stage: format_ident!("Play"), 
+            player: PlayerExpr::Current, 
+            end_condition: EndCondition::UntilRep(Repititions { times: IntExpr::Int(1) }), 
             flows: vec![
               FlowComponent::Rule(
-                Rule::CycleAction(
-                  PlayerExpr::Current
+                Rule::DealMove(
+                  DealMove::DealQuantity(
+                    Quantity::Int(IntExpr::Int(12)), 
+                    CardSet::Group(Group::Location(format_ident!("stock"))), 
+                    Status::Private, 
+                    CardSet::GroupOfPlayerCollection(Group::Location(format_ident!("hand")), PlayerCollection::Quantifier(Quantifier::All))
+                  )
                 )
               )
-            ]
+            ] 
           }
         );
     }
@@ -2604,6 +2609,51 @@ mod tests {
             card on stock:
               Rank(Two, Three, Four, Five, Six, Seven, Eight, Nine , Ten, Jack, Queen, King, Ace)
                 for Suite(Diamonds, Hearts, Spades, Clubs);
+            precedence RankOrder on Rank(Two, Three, Four, Five, Six, Seven, Eight, Nine , Ten, Jack, Queen, King, Ace);
+            combo Sequence where ((size >= 3 and same Suite) and adjacent Rank using RankOrder);
+  
+            stage Preparation for current until(1 times) {
+              deal 12 from top(stock) private to hand of all;
+            }
+
+            stage Collect for current until(previous out of stage) {
+              choose {
+                move top(discard) private to hand;
+                or
+                move top(stock) private to hand;
+              }
+
+              move any from hand face up to top(discard);
+
+              if (sum of Deadwood in hand using Values <= 10) {
+                optional {
+                  move all from Set in hand face up to top(laydown);
+                  move all from Sequence in hand face up to top(laydown);
+
+                  if (hand is empty) {
+                    move all from Set in hand of next face up to top(laydown) of next;
+                    move all from Sequence in hand of next face up to top(laydown) of next;
+                    move hand of next face up to trash of next;
+
+                    move hand face up to trash;
+                    set current out of stage;
+                  }
+                }
+              }
+
+              cycle to next;
+            }
+
+            stage FinalLayDown for current until(1 times) {
+              move laydown of previous face up to hand of current;
+              move all from Set in hand face up to top(laydown);
+              move all from Sequence in hand face up to top(laydown);
+
+              move hand face up to trash;
+            }
+
+            score sum of trash using Values to LeftOver of all;
+            winner is lowest LeftOver;
           "
         ).unwrap();
         assert_eq!(parsed,
@@ -2683,7 +2733,289 @@ mod tests {
                     ]
                   }
                 )
-              )
+              ),
+              // RankOrder
+              FlowComponent::Rule(
+                Rule::CreatePrecedence(
+                  format_ident!("RankOrder"),
+                  OnKeyPrec { 
+                    key: format_ident!("Rank"),
+                    values: vec![
+                      format_ident!("Two"),
+                      format_ident!("Three"),
+                      format_ident!("Four"),
+                      format_ident!("Five"),
+                      format_ident!("Six"),
+                      format_ident!("Seven"),
+                      format_ident!("Eight"),
+                      format_ident!("Nine"),
+                      format_ident!("Ten"),
+                      format_ident!("Jack"),
+                      format_ident!("Queen"),
+                      format_ident!("King"),
+                      format_ident!("Ace")
+                    ]
+                  }
+                )
+              ),
+              // Combo
+              FlowComponent::Rule(
+                Rule::CreateCombo(
+                  format_ident!("Sequence"),
+                  FilterExpr::And(
+                    Box::new(FilterExpr::And(
+                      Box::new(FilterExpr::SizeGe(Box::new(IntExpr::Int(3)))),
+                      Box::new(FilterExpr::Same(format_ident!("Suite")))
+                    )),
+                    Box::new(FilterExpr::Adjacent(format_ident!("Rank"), format_ident!("RankOrder")))
+                  )
+                )
+              ),
+              // Stage Preparation
+              FlowComponent::Stage(
+                SeqStage {
+                  stage: format_ident!("Preparation"), 
+                  player: PlayerExpr::Current, 
+                  end_condition: EndCondition::UntilRep(Repititions { times: IntExpr::Int(1) }), 
+                  flows: vec![
+                    FlowComponent::Rule(
+                      Rule::DealMove(
+                        DealMove::DealQuantity(
+                          Quantity::Int(IntExpr::Int(12)), 
+                          CardSet::Group(Group::CardPosition(CardPosition::Top(format_ident!("stock")))), 
+                          Status::Private, 
+                          CardSet::GroupOfPlayerCollection(Group::Location(format_ident!("hand")), PlayerCollection::Quantifier(Quantifier::All))
+                        )
+                      )
+                    )
+                  ] 
+                }
+              ),
+              // Stage Collect
+              FlowComponent::Stage(
+                SeqStage {
+                  stage: format_ident!("Collect"), 
+                  player: PlayerExpr::Current, 
+                  end_condition: EndCondition::UntilBool(BoolExpr::OutOfStagePlayer(PlayerExpr::Previous)), 
+                  flows: vec![
+                    // Choose
+                    FlowComponent::ChoiceRule(
+                      ChoiceRule {
+                        options: vec![
+                          // move top of discard to hand
+                          FlowComponent::Rule(
+                            Rule::ClassicMove(
+                              ClassicMove::Move(
+                                CardSet::Group(Group::CardPosition(CardPosition::Top(format_ident!("discard")))),
+                                Status::Private,
+                                CardSet::Group(Group::Location(format_ident!("hand")))
+                              )
+                            )
+                          ),
+                          // move top of stock to hand
+                          FlowComponent::Rule(
+                            Rule::ClassicMove(
+                              ClassicMove::Move(
+                                CardSet::Group(Group::CardPosition(CardPosition::Top(format_ident!("stock")))),
+                                Status::Private,
+                                CardSet::Group(Group::Location(format_ident!("hand")))
+                              )
+                            )
+                          ),
+                        ]
+                      }
+                    ),
+                    FlowComponent::Rule(
+                      Rule::ClassicMove(
+                        ClassicMove::MoveQuantity(
+                          Quantity::Quantifier(Quantifier::Any),
+                          CardSet::Group(Group::Location(format_ident!("hand"))),
+                          Status::FaceUp,
+                          CardSet::Group(Group::CardPosition(CardPosition::Top(format_ident!("discard")))),
+                        )
+                      )
+                    ),
+                    FlowComponent::IfRule(
+                      IfRule { 
+                        condition: BoolExpr::IntCmp(
+                          IntExpr::SumOfCardSet(
+                            Box::new(
+                              CardSet::Group(
+                                Group::ComboInLocation(
+                                  format_ident!("Deadwood"),
+                                  format_ident!("hand")
+                                )
+                              )
+                            ), 
+                            format_ident!("Values")
+                          ), 
+                          IntCmpOp::Le, 
+                          IntExpr::Int(10)
+                        ),
+                        flows: vec![
+                          FlowComponent::OptionalRule(
+                            OptionalRule { 
+                              flows: vec![
+                                FlowComponent::Rule(
+                                  Rule::ClassicMove(
+                                    ClassicMove::MoveQuantity(
+                                      Quantity::Quantifier(Quantifier::All),
+                                      CardSet::Group(Group::ComboInLocation(format_ident!("Set"), format_ident!("hand"))),
+                                      Status::FaceUp,
+                                      CardSet::Group(Group::CardPosition(CardPosition::Top(format_ident!("laydown")))),
+                                    )
+                                  )
+                                ),
+                                FlowComponent::Rule(
+                                  Rule::ClassicMove(
+                                    ClassicMove::MoveQuantity(
+                                      Quantity::Quantifier(Quantifier::All),
+                                      CardSet::Group(Group::ComboInLocation(format_ident!("Sequence"), format_ident!("hand"))),
+                                      Status::FaceUp,
+                                      CardSet::Group(Group::CardPosition(CardPosition::Top(format_ident!("laydown")))),
+                                    )
+                                  )
+                                ),
+                                // If rule
+                                FlowComponent::IfRule(
+                                  IfRule {
+                                    condition: BoolExpr::CardSetIsEmpty(
+                                      CardSet::Group(
+                                        Group::Location(format_ident!("hand"))
+                                      )
+                                    ),
+                                    flows: vec![
+                                      FlowComponent::Rule(
+                                        Rule::ClassicMove(
+                                          ClassicMove::MoveQuantity(
+                                            Quantity::Quantifier(Quantifier::All),
+                                            CardSet::GroupOfPlayer(Group::ComboInLocation(format_ident!("Set"), format_ident!("hand")), PlayerExpr::Next),
+                                            Status::FaceUp,
+                                            CardSet::GroupOfPlayer(Group::CardPosition(CardPosition::Top(format_ident!("laydown"))), PlayerExpr::Next),
+                                          )
+                                        )
+                                      ),
+                                      FlowComponent::Rule(
+                                        Rule::ClassicMove(
+                                          ClassicMove::MoveQuantity(
+                                            Quantity::Quantifier(Quantifier::All),
+                                            CardSet::GroupOfPlayer(Group::ComboInLocation(format_ident!("Sequence"), format_ident!("hand")), PlayerExpr::Next),
+                                            Status::FaceUp,
+                                            CardSet::GroupOfPlayer(Group::CardPosition(CardPosition::Top(format_ident!("laydown"))), PlayerExpr::Next),
+                                          )
+                                        )
+                                      ),
+                                      FlowComponent::Rule(
+                                        Rule::ClassicMove(
+                                          ClassicMove::Move(
+                                            CardSet::GroupOfPlayer(Group::Location(format_ident!("hand")), PlayerExpr::Next),
+                                            Status::FaceUp,
+                                            CardSet::GroupOfPlayer(Group::Location(format_ident!("trash")), PlayerExpr::Next),
+                                          )
+                                        )
+                                      ),
+                                      FlowComponent::Rule(
+                                        Rule::ClassicMove(
+                                          ClassicMove::Move(
+                                            CardSet::Group(Group::Location(format_ident!("hand"))),
+                                            Status::FaceUp,
+                                            CardSet::Group(Group::Location(format_ident!("trash"))),
+                                          )
+                                        )
+                                      ),
+                                      FlowComponent::Rule(
+                                        Rule::PlayerOutOfStageAction(
+                                          PlayerExpr::Current
+                                        )
+                                      ),
+                                    ]
+                                  }
+                                )
+                              ]
+                            }
+                          )
+                        ]
+                      }
+                    ),
+                    FlowComponent::Rule(
+                      Rule::CycleAction(PlayerExpr::Next)
+                    )
+                  ] 
+                }
+              ),
+              // Stage Preparation
+              FlowComponent::Stage(
+                SeqStage {
+                  stage: format_ident!("FinalLayDown"), 
+                  player: PlayerExpr::Current, 
+                  end_condition: EndCondition::UntilRep(Repititions { times: IntExpr::Int(1) }), 
+                  flows: vec![
+                    FlowComponent::Rule(
+                      Rule::ClassicMove(
+                        ClassicMove::Move(
+                          CardSet::GroupOfPlayer(Group::Location(format_ident!("laydown")), PlayerExpr::Previous),
+                          Status::FaceUp,
+                          CardSet::GroupOfPlayer(Group::Location(format_ident!("hand")), PlayerExpr::Current),
+                        )
+                      )
+                    ),
+                    FlowComponent::Rule(
+                      Rule::ClassicMove(
+                        ClassicMove::MoveQuantity(
+                          Quantity::Quantifier(Quantifier::All),
+                          CardSet::Group(Group::ComboInLocation(format_ident!("Set"), format_ident!("hand"))),
+                          Status::FaceUp,
+                          CardSet::Group(Group::CardPosition(CardPosition::Top(format_ident!("laydown")))),
+                        )
+                      )
+                    ),
+                    FlowComponent::Rule(
+                      Rule::ClassicMove(
+                        ClassicMove::MoveQuantity(
+                          Quantity::Quantifier(Quantifier::All),
+                          CardSet::Group(Group::ComboInLocation(format_ident!("Sequence"), format_ident!("hand"))),
+                          Status::FaceUp,
+                          CardSet::Group(Group::CardPosition(CardPosition::Top(format_ident!("laydown")))),
+                        )
+                      )
+                    ),
+                    FlowComponent::Rule(
+                      Rule::ClassicMove(
+                        ClassicMove::Move(
+                          CardSet::Group(Group::Location(format_ident!("hand"))),
+                          Status::FaceUp,
+                          CardSet::Group(Group::Location(format_ident!("trash"))),
+                        )
+                      )
+                    ),
+                  ] 
+                }
+              ),
+              FlowComponent::Rule(
+                Rule::ScoreRule(
+                  ScoreRule::ScorePlayerCollectionMemory(
+                    IntExpr::SumOfCardSet(
+                      Box::new(
+                        CardSet::Group(
+                          Group::Location(
+                            format_ident!("trash")
+                          )
+                        )
+                      ),
+                      format_ident!("Values")
+                    ),
+                    format_ident!("LeftOver"),
+                    PlayerCollection::Quantifier(Quantifier::All),
+                  )
+                )
+              ),
+              FlowComponent::Rule(
+                Rule::WinnerRule(
+                  WinnerRule::WinnerLowestMemory(
+                    format_ident!("LeftOver")
+                  )
+                )
+              ),
             ]
           }
         );
