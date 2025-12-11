@@ -2596,8 +2596,6 @@ mod tests {
 
     // Game ==================================================================
 
-    // TODO
-
     #[test]
     fn parses_valid_game() {
         let parsed: Game = parse_str(
@@ -2609,9 +2607,12 @@ mod tests {
             card on stock:
               Rank(Two, Three, Four, Five, Six, Seven, Eight, Nine , Ten, Jack, Queen, King, Ace)
                 for Suite(Diamonds, Hearts, Spades, Clubs);
-            precedence RankOrder on Rank(Two, Three, Four, Five, Six, Seven, Eight, Nine , Ten, Jack, Queen, King, Ace);
+            precedence RankOrder on Rank(Ace, Two, Three, Four, Five, Six, Seven, Eight, Nine , Ten, Jack, Queen, King);
+            pointmap Values on Rank(Ace: 1, Two: 2, Three: 3, Four: 4, Five: 5, Six: 6, Seven: 7, Eight: 8, Nine: 9 , Ten: 10, Jack: 10, Queen: 10, King: 10);
             combo Sequence where ((size >= 3 and same Suite) and adjacent Rank using RankOrder);
-  
+            combo Set where ((size >= 3 and distinct Suite) and same Rank);
+            combo Deadwood where (not Sequence and not Set);
+
             stage Preparation for current until(1 times) {
               deal 12 from top(stock) private to hand of all;
             }
@@ -2741,6 +2742,7 @@ mod tests {
                   OnKeyPrec { 
                     key: format_ident!("Rank"),
                     values: vec![
+                      format_ident!("Ace"),
                       format_ident!("Two"),
                       format_ident!("Three"),
                       format_ident!("Four"),
@@ -2753,12 +2755,74 @@ mod tests {
                       format_ident!("Jack"),
                       format_ident!("Queen"),
                       format_ident!("King"),
-                      format_ident!("Ace")
                     ]
                   }
                 )
               ),
-              // Combo
+              // Values
+              FlowComponent::Rule(
+                Rule::CreatePointMap(
+                  format_ident!("Values"),
+                  OnKeyPoint {
+                    key: format_ident!("Rank"),
+                    value_int_vec: vec![
+                      ValueIntPair{ 
+                        value: format_ident!("Ace"),
+                        int: IntExpr::Int(1),
+                      },
+                      ValueIntPair{ 
+                        value: format_ident!("Two"),
+                        int: IntExpr::Int(2),
+                      },
+                      ValueIntPair{ 
+                        value: format_ident!("Three"),
+                        int: IntExpr::Int(3),
+                      },
+                      ValueIntPair{ 
+                        value: format_ident!("Four"),
+                        int: IntExpr::Int(4),
+                      },
+                      ValueIntPair{ 
+                        value: format_ident!("Five"),
+                        int: IntExpr::Int(5),
+                      },
+                      ValueIntPair{ 
+                        value: format_ident!("Six"),
+                        int: IntExpr::Int(6),
+                      },
+                      ValueIntPair{ 
+                        value: format_ident!("Seven"),
+                        int: IntExpr::Int(7),
+                      },
+                      ValueIntPair{ 
+                        value: format_ident!("Eight"),
+                        int: IntExpr::Int(8),
+                      },
+                      ValueIntPair{ 
+                        value: format_ident!("Nine"),
+                        int: IntExpr::Int(9),
+                      },
+                      ValueIntPair{ 
+                        value: format_ident!("Ten"),
+                        int: IntExpr::Int(10),
+                      },
+                      ValueIntPair{ 
+                        value: format_ident!("Jack"),
+                        int: IntExpr::Int(10),
+                      },
+                      ValueIntPair{ 
+                        value: format_ident!("Queen"),
+                        int: IntExpr::Int(10),
+                      },
+                      ValueIntPair{ 
+                        value: format_ident!("King"),
+                        int: IntExpr::Int(10),
+                      },
+                    ]
+                  }
+                )
+              ),
+              // Combo Sequence
               FlowComponent::Rule(
                 Rule::CreateCombo(
                   format_ident!("Sequence"),
@@ -2768,6 +2832,33 @@ mod tests {
                       Box::new(FilterExpr::Same(format_ident!("Suite")))
                     )),
                     Box::new(FilterExpr::Adjacent(format_ident!("Rank"), format_ident!("RankOrder")))
+                  )
+                )
+              ),
+              // Combo Set
+              FlowComponent::Rule(
+                Rule::CreateCombo(
+                  format_ident!("Set"),
+                  FilterExpr::And(
+                    Box::new(FilterExpr::And(
+                      Box::new(FilterExpr::SizeGe(Box::new(IntExpr::Int(3)))),
+                      Box::new(FilterExpr::Distinct(format_ident!("Suite")))
+                    )),
+                    Box::new(FilterExpr::Same(format_ident!("Rank")))
+                  )
+                )
+              ),
+              // Combo Set
+              FlowComponent::Rule(
+                Rule::CreateCombo(
+                  format_ident!("Deadwood"),
+                  FilterExpr::And(
+                    Box::new(
+                      FilterExpr::NotCombo(format_ident!("Sequence"))
+                    ),
+                    Box::new(
+                      FilterExpr::NotCombo(format_ident!("Set"))
+                    )
                   )
                 )
               ),
