@@ -17,7 +17,7 @@ pub type Value = Ident;
 pub type ID = Ident; 
 
 // Structs + Enums
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum PlayerExpr {
     PlayerName(PlayerName),
     Current,
@@ -30,7 +30,7 @@ pub enum PlayerExpr {
     OwnerOfLowest(Memory),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum IntExpr {
     Int(i32),
     IntOp(Box<IntExpr>, Op, Box<IntExpr>),
@@ -46,7 +46,7 @@ pub enum IntExpr {
     // PlayRoundCounter,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Op {
     Plus,
     Minus,
@@ -55,7 +55,7 @@ pub enum Op {
     Mod
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Collection {
     IntCollection(IntCollection),
     StringCollection(StringCollection),
@@ -65,22 +65,22 @@ pub enum Collection {
     CardSet(Box<CardSet>),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct IntCollection {
     pub ints: Vec<IntExpr>
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct StringCollection {
     pub strings: Vec<StringExpr>
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct LocationCollection {
     pub locations: Vec<Location>
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum PlayerCollection {
     Player(Vec<PlayerExpr>),
     Others,
@@ -89,20 +89,20 @@ pub enum PlayerCollection {
     PlayersIn,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TeamCollection {
     Team(Vec<TeamExpr>),
     OtherTeams,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum StringExpr {
     ID(ID),
     KeyOf(Key, CardPosition),
     StringCollectionAt(StringCollection, IntExpr),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum CardPosition {
     At(Location, IntExpr),
     Top(Location),
@@ -113,7 +113,7 @@ pub enum CardPosition {
     MinPoint(Box<CardSet>, PointMap),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum BoolExpr {
     StringEq(StringExpr, StringExpr),
     StringNeq(StringExpr, StringExpr),
@@ -135,7 +135,7 @@ pub enum BoolExpr {
     OutOfGameCollection(PlayerCollection),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum IntCmpOp {
     Eq,
     Neq,
@@ -145,27 +145,27 @@ pub enum IntCmpOp {
     Le
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Status {
     FaceUp,
     FaceDown,
     Private
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TeamExpr {
     TeamName(TeamName),
     TeamOf(PlayerExpr)
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Quantity {
     Int(IntExpr),
     Quantifier(Quantifier),
     IntRange(IntRange),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum IntRange {
     Eq(IntExpr),
     Neq(IntExpr),
@@ -175,20 +175,20 @@ pub enum IntRange {
     Le(IntExpr),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Quantifier {
     All,
     Any
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum CardSet {
     Group(Group),
     GroupOfPlayer(Group, PlayerExpr),
     GroupOfPlayerCollection(Group, PlayerCollection),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Group {
     Location(Location),
     LocationWhere(Location, FilterExpr),
@@ -201,7 +201,7 @@ pub enum Group {
     CardPosition(CardPosition),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum FilterExpr {
     Same(Key),
     Distinct(Key),
@@ -222,12 +222,12 @@ pub enum FilterExpr {
     Or(Box<FilterExpr>, Box<FilterExpr>),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Game {
     pub flows: Vec<FlowComponent>
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum FlowComponent {
     Stage(SeqStage),
     Rule(Rule),
@@ -236,7 +236,7 @@ pub enum FlowComponent {
     OptionalRule(OptionalRule),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum EndCondition {
     UntilBool(BoolExpr),
     UntilBoolAndRep(BoolExpr, Repititions),
@@ -245,12 +245,12 @@ pub enum EndCondition {
     UntilEnd
 }   
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Repititions {
     pub times: IntExpr
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Rule {
     // Creations
     CreatePlayer(Vec<PlayerName>),
@@ -307,40 +307,40 @@ pub enum Rule {
     WinnerRule(WinnerRule)
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Types {
     pub types: Vec<(Key, Vec<Value>)>
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct OnKeyPrec {
     pub key: Key,
     pub values: Vec<Value>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct KeyValuePairs {
     pub key_value: Vec<(Key, Value)>
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ValueIntPair {
     pub value: Value,
     pub int: IntExpr
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct OnKeyPoint {
     pub key: Key,
     pub value_int_vec: Vec<ValueIntPair>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct KeyValueInt {
     pub key_value_int_vec: Vec<(Key, Value, IntExpr)>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct SeqStage {
     pub stage: Stage,
     pub player: PlayerExpr,
@@ -348,47 +348,47 @@ pub struct SeqStage {
     pub flows: Vec<FlowComponent>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct IfRule {
     pub condition: BoolExpr,
     pub flows: Vec<FlowComponent>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct OptionalRule {
     pub flows: Vec<FlowComponent>
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ChoiceRule {
     pub options: Vec<FlowComponent>
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ClassicMove {
     Move(CardSet, Status, CardSet),
     MoveQuantity(Quantity, CardSet, Status, CardSet),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum DealMove {
     Deal(CardSet, Status, CardSet),
     DealQuantity(Quantity, CardSet, Status, CardSet),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ExchangeMove {
     Exchange(CardSet, Status, CardSet),
     ExchangeQuantity(Quantity, CardSet, Status, CardSet),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenMove {
     Place(TokenLocExpr, TokenLocExpr),
     PlaceQuantity(Quantity, TokenLocExpr, TokenLocExpr),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenLocExpr {
     Location(Location),
     LocationCollection(LocationCollection),
@@ -398,7 +398,7 @@ pub enum TokenLocExpr {
     LocationCollectionPlayerCollection(LocationCollection, PlayerCollection),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ScoreRule {
     ScorePlayer(IntExpr, PlayerExpr),
     ScorePlayerMemory(IntExpr, Memory, PlayerExpr),
@@ -406,7 +406,7 @@ pub enum ScoreRule {
     ScorePlayerCollectionMemory(IntExpr, Memory, PlayerCollection),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum WinnerRule {
     WinnerPlayer(PlayerExpr),
     WinnerPlayerCollection(PlayerCollection),
