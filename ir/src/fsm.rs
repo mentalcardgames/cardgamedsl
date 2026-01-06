@@ -3,6 +3,7 @@ use ast::ast::*;
 
 pub type StateID = i32;
 pub type StageExit = i32;
+pub type ChoiceExit = i32;
 pub type TransitionID = i32;
 
 #[derive(Clone, Debug)]
@@ -37,6 +38,7 @@ impl Default for FSM {
 }
 
 impl FSM {
+  /// Adds a transition to the current FSM.
   fn add_transition(
     &mut self,
     from_state: StateID,
@@ -50,6 +52,7 @@ impl FSM {
     self.transitions.insert(transition_id, transition);
   }
 
+  /// Adds a state to the current FSM.
   fn add_state(&mut self, state_id: StateID) {
     self.states.insert(state_id, Vec::new());
   }
@@ -61,7 +64,7 @@ pub struct FSMBuilder {
   state_counter: i32,
   current_transition_id: i32,
   stage_exits: Vec<StageExit>,
-  choice_exit: Option<i32>,
+  choice_exits: Vec<i32>,
 }
 
 impl Default for FSMBuilder {
@@ -72,12 +75,14 @@ impl Default for FSMBuilder {
       state_counter: 0,
       current_transition_id: 0,
       stage_exits: Vec::new(),
-      choice_exit: None,
+      choice_exits: Vec::new(),
     }
   }
 }
 
 impl FSMBuilder {
+  /// Builds FSM.
+  /// Initializes the first state and then continues with the building of the FlowComponent's
   pub fn build_fsm(&mut self, game: Game) -> FSM {
     // initialize first state
     self.fsm.add_state(self.current_state_id);
@@ -87,12 +92,17 @@ impl FSMBuilder {
     return self.fsm.clone()
   }
 
+  /// Takes a Vector of FlowComponent's and extends the FSM with them.
   fn build_flows(&mut self, flows: &Vec<FlowComponent>) {
     for flow in flows.iter() {
       self.build_flow(flow);
     }
   }
 
+  /// Increments the state_counter.
+  /// Adds the the new state (id of state == state_counter) to the FSM.
+  /// Sets current_state_id to state_counter.
+  /// Returns updated state_counter.
   fn new_state(&mut self) -> i32 {
     self.state_counter += 1;
     self.fsm.add_state(self.state_counter);
@@ -101,6 +111,8 @@ impl FSMBuilder {
     return self.state_counter
   }
 
+  /// Updates the current_transition_id.
+  /// Adds the transition to the FSM.
   fn new_transition(&mut self, from_state: StateID, to_state: StateID, transition: Transition) {
     self.current_transition_id += 1;
 
@@ -112,14 +124,20 @@ impl FSMBuilder {
     );
   }
 
-  fn new_exit(&mut self) -> i32 {
-    if let Some(exit) = self.choice_exit {
-      return exit
+  /// Checks if we are in a ChoiceRule.
+  /// If we are in a ChoiceRule:
+  ///   > Set the exit of the next FlowComponent to the exit of the ChoiceRule and returns it
+  /// Else:
+  ///   > Return a new exit (create a new state and return it)
+  fn new_exit(&mut self) -> StateID {
+    if !self.choice_exits.is_empty() {
+      return self.choice_exits.last().unwrap().clone()
     }
 
     return self.new_state()
   }
 
+  /// Builds a singular FlowComponent.
   fn build_flow(&mut self, flow: &FlowComponent) {
     match flow {
         FlowComponent::ChoiceRule(choice_rule) => {
@@ -144,9 +162,9 @@ impl FSMBuilder {
     let entry = self.current_state_id;
     let exit = self.new_exit();
 
-    // -----------------------------------------------------------------------
+    // =======================================================================
     // start new "choice-block"
-    self.choice_exit = Some(exit);
+    self.choice_exits.push(exit);
 
     for option in choice_rule.options.iter() {
       let choice = self.new_state();
@@ -161,8 +179,8 @@ impl FSMBuilder {
     }
 
     // end choice block
-    self.choice_exit = None;
-    // -----------------------------------------------------------------------
+    self.choice_exits.pop();
+    // =======================================================================
 
     // continue building from the exit
     self.current_state_id = exit;

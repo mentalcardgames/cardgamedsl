@@ -1,10 +1,12 @@
 mod test {
 
   use std::{path::Path, process::Command};
-  use ir::fsm::*;
-  use ast::ast::*;
-  use ir::fsm_to_dot::*;
   use quote::format_ident;
+
+  use ast::ast::*;
+
+  use ir::fsm::*;
+  use ir::fsm_to_dot::*;
 
   fn show_graph(fsm: &FSM, name: &str) {
     let dot_path_name: &str = &format!("target/fsm/{}.dot", name);
