@@ -1,7 +1,8 @@
-digraph FSM {
-  rankdir=LR;
-  node [shape = circle];
-  0 -> 1 [label="Action(EndTurn)"];
-  start [shape=point];
-  start -> 0;
+digraph CFG {
+  graph [splines=ortho, nodesep=1.0, ranksep=1.0, concentrate=true];
+  node [shape=box, fontname="Consolas, 'Courier New', monospace", style=filled, fillcolor="#ffffff", bordercolor="#333333"];
+  edge [fontname="Consolas", fontsize=9, arrowsize=0.8];
+  entry [shape=point];
+  entry -> 0;
+  0 -> 1 [xlabel=" Action "];
 }
