@@ -51,7 +51,7 @@
       "patterns": [
         {
           "name": "keyword.control.flow.cgdsl",
-          "match": "\\b(stage|if|optional|choose|case)\\b"
+          "match": "\\b(stage|if|optional|choose|case|conditional|else|trigger)\\b"
         }
       ]
     },
