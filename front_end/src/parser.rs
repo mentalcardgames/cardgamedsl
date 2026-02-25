@@ -344,17 +344,19 @@ impl CGDSLParser {
     }
 
     pub(crate) fn playername(input: Node) -> Result<SID> {
-        Ok(SID {
-            node: input.as_str().to_string(),
-            span: OwnedSpan::from(input.as_span()),
-        })
+        Ok(
+            match_nodes!(input.children();
+                [ident(i)] => i,
+            )
+        )
     }
 
     pub(crate) fn teamname(input: Node) -> Result<SID> {
-        Ok(SID {
-            node: input.as_str().to_string(),
-            span: OwnedSpan::from(input.as_span()),
-        })
+        Ok(
+            match_nodes!(input.children();
+                [ident(i)] => i,
+            )
+        )
     }
 
     pub(crate) fn precedence(input: Node) -> Result<SID> {
@@ -534,7 +536,8 @@ impl CGDSLParser {
             [kw_next(r)] => sruntime_player(r, span),
             [owner_of_player(q)] => saggregate_player(q, span),
             [turnorder_at(q)] => SPlayerExpr { node: PlayerExpr::Query { query: SQueryPlayer { node: q, span: span.clone() } }, span },
-            [playername(p)] => SPlayerExpr { node: PlayerExpr::Literal { name: p }, span }
+            [playername(p)] => SPlayerExpr { node: PlayerExpr::Literal { name: p }, span },
+            [player_memory(n)] => SPlayerExpr { node: PlayerExpr::Memory { memory: n }, span},
         ))
     }
 
@@ -705,7 +708,7 @@ impl CGDSLParser {
             [extrema_of_int_collection(n)] => n,
             [runtime_int(n)] => n,
             [int(n)] => n,
-            [use_memory(m)] => SIntExpr { node: IntExpr::Memory { memory: m }, span },
+            [int_memory(m)] => SIntExpr { node: IntExpr::Memory { memory: m }, span },
         ))
     }
 
@@ -729,7 +732,7 @@ impl CGDSLParser {
             [key_of_card_position(n)] => n,
             [string_collection_at(n)] => n,
             [value(v)] => SStringExpr { node: StringExpr::Literal { value: v }, span: span },
-            [use_memory(m)] => SStringExpr { node: StringExpr::Memory { memory: m }, span },
+            [string_memory(m)] => SStringExpr { node: StringExpr::Memory { memory: m }, span },
         ))
     }
 
@@ -749,6 +752,7 @@ impl CGDSLParser {
         Ok(match_nodes!(input.into_children();
             [team_of_player(n)] => n,
             [teamname(n)] => STeamExpr { node: TeamExpr::Literal { name: n }, span},
+            [team_memory(n)] => STeamExpr { node: TeamExpr::Memory { memory: n }, span},
         ))
     }
 
@@ -756,7 +760,8 @@ impl CGDSLParser {
         let span = OwnedSpan::from(input.as_span());
         let node = match_nodes!(input.into_children();
             [int_expr(int_exprs)..] => IntCollection::Literal { ints: int_exprs.collect() },
-            [use_memory(m)] => IntCollection::Memory { memory: m },
+            [int_collection_memory(m)] => IntCollection::Memory { memory: m },
+            [memory(m), kw_of(_), multi_owner(o)] => IntCollection::AggregateMemory { memory: m, multi: o },
         );
 
         Ok(SIntCollection { node: node, span })
@@ -766,7 +771,8 @@ impl CGDSLParser {
         let span = OwnedSpan::from(input.as_span());
         let node = match_nodes!(input.into_children();
             [string_expr(string_exprs)..] => StringCollection::Literal { strings: string_exprs.collect() },
-            [use_memory(m)] => StringCollection::Memory { memory: m },
+            [string_collection_memory(m)] => StringCollection::Memory { memory: m },
+            [memory(m), kw_of(_), multi_owner(o)] => StringCollection::AggregateMemory { memory: m, multi: o },
         );
 
         Ok(SStringCollection { node: node, span })
@@ -983,7 +989,9 @@ impl CGDSLParser {
             [kw_others(_)] => sruntime_player_collection(RuntimePlayerCollection::Others, span),
             [kw_playersin(_)] => sruntime_player_collection(RuntimePlayerCollection::PlayersIn, span),
             [kw_playersout(_)] => sruntime_player_collection(RuntimePlayerCollection::PlayersOut, span),
-            [use_memory(m)] => SPlayerCollection { node: PlayerCollection::Memory { memory: m }, span },
+            [player_collection_memory(m)] => SPlayerCollection { node: PlayerCollection::Memory { memory: m }, span },
+            [memory(m), kw_of(_), multi_owner(o)] => SPlayerCollection { node: PlayerCollection::AggregateMemory { memory: m, multi: o }, span },
+
         ))
     }
 
@@ -1025,10 +1033,6 @@ impl CGDSLParser {
         let span = OwnedSpan::from(input.as_span());
         let node = match_nodes!(input.clone().into_children();
             [players(n), kw_out(_), kw_of(_), out_of(s)] => saggregate_bool(AggregateBool::OutOfPlayer { players: n, out_of: s }, span),
-            [use_memory(m1), eq(e), use_memory(m2)] =>
-                resolve_use_memory_eq_use_memory(m1, e, m2, span, input),
-            [use_memory(m1), neq(ne), use_memory(m2)] =>
-                resolve_use_memory_neq_use_memory(m1, ne, m2, span, input),
             [card_set_bool(n)] => n,
             [string_expr_bool(n)] => n,
             [player_expr_bool(n)] => n,
@@ -1098,7 +1102,118 @@ impl CGDSLParser {
         ))
     }
 
-    pub(crate) fn use_memory(input: Node) -> Result<SUseMemory> {
+    pub(crate) fn single_owner(input: Node) -> Result<SSingleOwner> {
+        let span = OwnedSpan::from(input.as_span());
+        let node = match_nodes!(input.children();
+            [player_expr(p)] => SingleOwner::Player { player: p },
+            [team_expr(t)] => SingleOwner::Team { team: t },
+            [kw_table(_)] => SingleOwner::Table,
+        );
+
+        Ok(SSingleOwner { node: node, span })
+    }
+
+    pub(crate) fn multi_owner(input: Node) -> Result<SMultiOwner> {
+        let span = OwnedSpan::from(input.as_span());
+        let node = match_nodes!(input.children();
+            [player_collection(p)] => MultiOwner::PlayerCollection { player_collection: Box::new(p) },
+            [team_collection(t)] => MultiOwner::TeamCollection { team_collection: Box::new(t) },
+        );
+
+        Ok(SMultiOwner { node: node, span })
+    }
+
+    pub(crate) fn player_memory(input: Node) -> Result<SUseSingleMemory> {
+        let span = OwnedSpan::from(input.as_span());
+        let node = match_nodes!(input.children();
+            [memory(m)] => UseSingleMemory::Memory { memory: m },
+            [memory(m), kw_of(_), single_owner(o)] => UseSingleMemory::WithOwner { memory: m, owner: Box::new(o) },
+        );
+
+        Ok(SUseSingleMemory { node: node, span })
+    }
+
+    pub(crate) fn team_memory(input: Node) -> Result<SUseSingleMemory> {
+        let span = OwnedSpan::from(input.as_span());
+        let node = match_nodes!(input.children();
+            [memory(m)] => UseSingleMemory::Memory { memory: m },
+            [memory(m), kw_of(_), single_owner(o)] => UseSingleMemory::WithOwner { memory: m, owner: Box::new(o) },
+        );
+
+        Ok(SUseSingleMemory { node: node, span })
+    }
+
+    pub(crate) fn int_memory(input: Node) -> Result<SUseSingleMemory> {
+        let span = OwnedSpan::from(input.as_span());
+        let node = match_nodes!(input.children();
+            [memory(m)] => UseSingleMemory::Memory { memory: m },
+            [memory(m), kw_of(_), single_owner(o)] => UseSingleMemory::WithOwner { memory: m, owner: Box::new(o) },
+        );
+
+        Ok(SUseSingleMemory { node: node, span })
+    }
+
+    pub(crate) fn string_memory(input: Node) -> Result<SUseSingleMemory> {
+        let span = OwnedSpan::from(input.as_span());
+        let node = match_nodes!(input.children();
+            [memory(m)] => UseSingleMemory::Memory { memory: m },
+            [memory(m), kw_of(_), single_owner(o)] => UseSingleMemory::WithOwner { memory: m, owner: Box::new(o) },
+        );
+
+        Ok(SUseSingleMemory { node: node, span })
+    }
+
+    pub(crate) fn player_collection_memory(input: Node) -> Result<SUseMemory> {
+        let span = OwnedSpan::from(input.as_span());
+        let node = match_nodes!(input.children();
+            [memory(m)] => UseMemory::Memory { memory: m },
+            [memory(m), kw_of(_), owner(o)] => UseMemory::WithOwner { memory: m, owner: Box::new(o) },
+        );
+
+        Ok(SUseMemory { node: node, span })
+    }
+
+    pub(crate) fn team_collection_memory(input: Node) -> Result<SUseMemory> {
+        let span = OwnedSpan::from(input.as_span());
+        let node = match_nodes!(input.children();
+            [memory(m)] => UseMemory::Memory { memory: m },
+            [memory(m), kw_of(_), owner(o)] => UseMemory::WithOwner { memory: m, owner: Box::new(o) },
+        );
+
+        Ok(SUseMemory { node: node, span })
+    }
+
+    pub(crate) fn string_collection_memory(input: Node) -> Result<SUseMemory> {
+        let span = OwnedSpan::from(input.as_span());
+        let node = match_nodes!(input.children();
+            [memory(m)] => UseMemory::Memory { memory: m },
+            [memory(m), kw_of(_), owner(o)] => UseMemory::WithOwner { memory: m, owner: Box::new(o) },
+        );
+
+        Ok(SUseMemory { node: node, span })
+    }
+
+    pub(crate) fn int_collection_memory(input: Node) -> Result<SUseMemory> {
+        let span = OwnedSpan::from(input.as_span());
+        let node = match_nodes!(input.children();
+            [memory(m)] => UseMemory::Memory { memory: m },
+            [memory(m), kw_of(_), owner(o)] => UseMemory::WithOwner { memory: m, owner: Box::new(o) },
+        );
+
+        Ok(SUseMemory { node: node, span })
+    }
+
+    pub(crate) fn location_collection_memory(input: Node) -> Result<SUseMemory> {
+        let span = OwnedSpan::from(input.as_span());
+        let node = match_nodes!(input.children();
+            [memory(m)] => UseMemory::Memory { memory: m },
+            [memory(m), kw_of(_), owner(o)] => UseMemory::WithOwner { memory: m, owner: Box::new(o) },
+        );
+
+        Ok(SUseMemory { node: node, span })
+    }
+
+    pub(crate) fn card_set_memory(input: Node) -> Result<SUseMemory> {
         let span = OwnedSpan::from(input.as_span());
         let node = match_nodes!(input.children();
             [memory(m)] => UseMemory::Memory { memory: m },
@@ -1308,8 +1423,6 @@ impl CGDSLParser {
             [team_expr(n)] => Owner::Team { team: n },
             [team_collection(n)] => Owner::TeamCollection { team_collection: n },
             [kw_table(_)] => Owner::Table,
-            [use_memory(m)] => resolve_owner_memory(m, span.clone(), input),
-            [ident(ids)..] => resolve_owner_idents(ids.collect(), span.clone(), input),
         );
 
         Ok(SOwner { node: node, span })
@@ -1337,16 +1450,13 @@ impl CGDSLParser {
         Ok(match_nodes!(input.into_children();
             [group_of_owner(n)] => n,
             [group(n)] => SCardSet { node: CardSet::Group { group: n }, span },
-            [use_memory(n)] => SCardSet { node: CardSet::Memory { memory: n }, span },
+            [card_set_memory(n)] => SCardSet { node: CardSet::Memory { memory: n }, span },
         ))
     }
 
     pub(crate) fn collection(input: Node) -> Result<SCollection> {
         let span = OwnedSpan::from(input.as_span());
         Ok(match_nodes!(input.clone().into_children();
-            [use_memory(memory)] => resolve_collection_memory(memory, span, input),
-            [ident(ids)..] => resolve_collection_idents(ids.collect(), span, input),
-            [use_memory(mis)..] => resolve_collection_use_memory(mis.collect(), span, input),
             [int_collection(n)] => SCollection {node: Collection::IntCollection { int: n }, span},
             [string_collection(n)] => SCollection {node: Collection::StringCollection { string: n }, span},
             [player_collection(n)] => SCollection {node: Collection::PlayerCollection { player: n }, span},
@@ -1360,7 +1470,7 @@ impl CGDSLParser {
         let span = OwnedSpan::from(input.as_span());
         let node = match_nodes!(input.into_children();
                 [location(ids)..] => LocationCollection::Literal { locations: ids.collect() },
-                [use_memory(m)] => LocationCollection::Memory { memory: m },
+                [location_collection_memory(m)] => LocationCollection::Memory { memory: m },
         );
 
         Ok(SLocationCollection { node: node, span })
@@ -1389,7 +1499,8 @@ impl CGDSLParser {
         Ok(match_nodes!(input.into_children();
             [team_expr_collection(n)] => n,
             [other_teams(_)] => sruntime_team_collection(RuntimeTeamCollection::OtherTeams, span),
-            [use_memory(m)] => STeamCollection { node: TeamCollection::Memory { memory: m }, span },
+            [memory(m), kw_of(_), multi_owner(o)] => STeamCollection { node: TeamCollection::AggregateMemory { memory: m, multi: o }, span },
+            [team_collection_memory(m)] => STeamCollection { node: TeamCollection::Memory { memory: m }, span },
         ))
     }
 
@@ -1433,14 +1544,7 @@ impl CGDSLParser {
         Ok(
             // TODO: Resolve Cloning later if possibler
             match_nodes!(input.clone().into_children();
-                [playername(players)..] => {
-                    let ps: Vec<SID> = players.collect();
-                    for p in ps.iter() {
-                        input.user_data().borrow_mut().symbols.insert(p.node.clone(), GameType::Player);
-                    }
-
-                    ps
-                },
+                [ident(players)..] => players.collect(),
             ),
         )
     }
@@ -1449,12 +1553,8 @@ impl CGDSLParser {
         input: Node,
     ) -> Result<(SID, SPlayerCollection)> {
         Ok(
-            // TODO: Resolve Cloning later
             match_nodes!(input.clone().into_children();
-                [teamname(teamname), kw_with(_), player_collection(p)] => {
-                    input.user_data().borrow_mut().symbols.insert(teamname.node.clone(), GameType::Team);
-                    (teamname, p)
-                },
+                [ident(teamname), kw_with(_), player_collection(p)] => (teamname, p),
             ),
         )
     }
@@ -1772,10 +1872,7 @@ impl CGDSLParser {
 
     pub(crate) fn memory_type(input: Node) -> Result<SMemoryType> {
         let span = OwnedSpan::from(input.as_span());
-        // TODO: Resolve Cloning later!
         let node = match_nodes!(input.clone().into_children();
-            // Resolving Memory
-            [use_memory(memory)] => resolve_memory_type(memory, span.clone(), input),
             [int_expr(i)] => MemoryType::Int { int: i },
             [string_expr(s)] => MemoryType::String { string: s },
             [collection(c)] => {
@@ -2272,781 +2369,4 @@ pub(crate) fn saggregate_bool(aggr: AggregateBool, span: OwnedSpan) -> SBoolExpr
         },
         span: span.clone(),
     }
-}
-
-// ===========================================================================
-// ===========================================================================
-// Resolving-Logic
-// ===========================================================================
-// ===========================================================================
-
-pub(crate) fn resolve_collection_memory(
-    memory: SUseMemory,
-    span: OwnedSpan,
-    input: Node,
-) -> SCollection {
-    let mem = match &memory.node {
-        UseMemory::Memory { memory } => &memory.node,
-        UseMemory::WithOwner { memory, owner: _ } => &memory.node,
-    };
-    if let Some(m) = input.user_data().borrow().memories.get(mem) {
-        let node = match m {
-            MemType::StringCollection => Collection::StringCollection {
-                string: SStringCollection {
-                    node: StringCollection::Memory {
-                        memory: memory.clone(),
-                    },
-                    span: span.clone(),
-                },
-            },
-            MemType::PlayerCollection => Collection::PlayerCollection {
-                player: SPlayerCollection {
-                    node: PlayerCollection::Memory {
-                        memory: memory.clone(),
-                    },
-                    span: span.clone(),
-                },
-            },
-            MemType::TeamCollection => Collection::TeamCollection {
-                team: STeamCollection {
-                    node: TeamCollection::Memory {
-                        memory: memory.clone(),
-                    },
-                    span: span.clone(),
-                },
-            },
-            MemType::LocationCollection => Collection::LocationCollection {
-                location: SLocationCollection {
-                    node: LocationCollection::Memory {
-                        memory: memory.clone(),
-                    },
-                    span: span.clone(),
-                },
-            },
-            MemType::CardSet => Collection::CardSet {
-                card_set: Box::new(SCardSet {
-                    node: CardSet::Memory {
-                        memory: memory.clone(),
-                    },
-                    span: span.clone(),
-                }),
-            },
-            // FallBack
-            _ => Collection::IntCollection {
-                int: SIntCollection {
-                    node: IntCollection::Memory {
-                        memory: memory.clone(),
-                    },
-                    span: span.clone(),
-                },
-            },
-        };
-
-        return SCollection { node: node, span };
-    }
-
-    // FallBack
-    SCollection {
-        node: Collection::IntCollection {
-            int: SIntCollection {
-                node: IntCollection::Memory {
-                    memory: memory.clone(),
-                },
-                span: span.clone(),
-            },
-        },
-        span: span,
-    }
-}
-
-pub(crate) fn resolve_collection_idents(
-    ids: Vec<SID>,
-    span: OwnedSpan,
-    input: Node,
-) -> SCollection {
-    let names: Vec<SID> = ids;
-    for name in names.iter() {
-        if let Some(game_type) = input.user_data().borrow().symbols.get(&name.node) {
-            let result = match game_type {
-                GameType::Player => SCollection {
-                    node: Collection::PlayerCollection {
-                        player: SPlayerCollection {
-                            node: PlayerCollection::Literal {
-                                players: names
-                                    .iter()
-                                    .map(|n| SPlayerExpr {
-                                        node: PlayerExpr::Literal { name: n.clone() },
-                                        span: span.clone(),
-                                    })
-                                    .collect(),
-                            },
-                            span: span.clone(),
-                        },
-                    },
-                    span,
-                },
-                GameType::Team => SCollection {
-                    node: Collection::TeamCollection {
-                        team: STeamCollection {
-                            node: TeamCollection::Literal {
-                                teams: names
-                                    .iter()
-                                    .map(|n| STeamExpr {
-                                        node: TeamExpr::Literal { name: n.clone() },
-                                        span: span.clone(),
-                                    })
-                                    .collect(),
-                            },
-                            span: span.clone(),
-                        },
-                    },
-                    span,
-                },
-                GameType::Location => SCollection {
-                    node: Collection::LocationCollection {
-                        location: SLocationCollection {
-                            node: LocationCollection::Literal { locations: names },
-                            span: span.clone(),
-                        },
-                    },
-                    span,
-                },
-                // FallBack
-                _ => SCollection {
-                    node: Collection::PlayerCollection {
-                        player: SPlayerCollection {
-                            node: PlayerCollection::Literal {
-                                players: names
-                                    .iter()
-                                    .map(|n| SPlayerExpr {
-                                        node: PlayerExpr::Literal { name: n.clone() },
-                                        span: span.clone(),
-                                    })
-                                    .collect(),
-                            },
-                            span: span.clone(),
-                        },
-                    },
-                    span,
-                },
-            };
-
-            return result;
-        }
-    }
-
-    // FallBack
-    SCollection {
-        node: Collection::PlayerCollection {
-            player: SPlayerCollection {
-                node: PlayerCollection::Literal {
-                    players: names
-                        .iter()
-                        .map(|n| SPlayerExpr {
-                            node: PlayerExpr::Literal { name: n.clone() },
-                            span: span.clone(),
-                        })
-                        .collect(),
-                },
-                span: span.clone(),
-            },
-        },
-        span,
-    }
-}
-
-pub(crate) fn resolve_collection_use_memory(
-    ids: Vec<SUseMemory>,
-    span: OwnedSpan,
-    input: Node,
-) -> SCollection {
-    // ints
-    // checking the first type
-    let id = ids.first().unwrap();
-    match &id.node {
-        UseMemory::Memory { memory } => {
-            if let Some(ty) = input.user_data().borrow().memories.get(&memory.node) {
-                match ty {
-                    MemType::Int => {
-                        return SCollection {
-                            node: Collection::IntCollection {
-                                int: SIntCollection {
-                                    node: IntCollection::Literal {
-                                        ints: ids
-                                            .iter()
-                                            .map(|i| SIntExpr {
-                                                node: IntExpr::Memory { memory: i.clone() },
-                                                span: span.clone(),
-                                            })
-                                            .collect(),
-                                    },
-                                    span: span.clone(),
-                                },
-                            },
-                            span,
-                        };
-                    }
-                    MemType::String => {
-                        return SCollection {
-                            node: Collection::StringCollection {
-                                string: SStringCollection {
-                                    node: StringCollection::Literal {
-                                        strings: ids
-                                            .iter()
-                                            .map(|i| SStringExpr {
-                                                node: StringExpr::Memory { memory: i.clone() },
-                                                span: span.clone(),
-                                            })
-                                            .collect(),
-                                    },
-                                    span: span.clone(),
-                                },
-                            },
-                            span,
-                        };
-                    }
-                    // FallBack is IntCollection
-                    _ => {
-                        return SCollection {
-                            node: Collection::IntCollection {
-                                int: SIntCollection {
-                                    node: IntCollection::Literal {
-                                        ints: ids
-                                            .iter()
-                                            .map(|i| SIntExpr {
-                                                node: IntExpr::Memory { memory: i.clone() },
-                                                span: span.clone(),
-                                            })
-                                            .collect(),
-                                    },
-                                    span: span.clone(),
-                                },
-                            },
-                            span,
-                        };
-                    }
-                }
-            } else {
-                // FallBack is IntCollection
-                return SCollection {
-                    node: Collection::IntCollection {
-                        int: SIntCollection {
-                            node: IntCollection::Literal {
-                                ints: ids
-                                    .iter()
-                                    .map(|i| SIntExpr {
-                                        node: IntExpr::Memory { memory: i.clone() },
-                                        span: span.clone(),
-                                    })
-                                    .collect(),
-                            },
-                            span: span.clone(),
-                        },
-                    },
-                    span,
-                };
-            }
-        }
-        UseMemory::WithOwner { memory, owner: _ } => {
-            if let Some(ty) = input.user_data().borrow().memories.get(&memory.node) {
-                match ty {
-                    MemType::Int => {
-                        return SCollection {
-                            node: Collection::IntCollection {
-                                int: SIntCollection {
-                                    node: IntCollection::Literal {
-                                        ints: ids
-                                            .iter()
-                                            .map(|i| SIntExpr {
-                                                node: IntExpr::Memory { memory: i.clone() },
-                                                span: span.clone(),
-                                            })
-                                            .collect(),
-                                    },
-                                    span: span.clone(),
-                                },
-                            },
-                            span,
-                        };
-                    }
-                    MemType::String => {
-                        return SCollection {
-                            node: Collection::StringCollection {
-                                string: SStringCollection {
-                                    node: StringCollection::Literal {
-                                        strings: ids
-                                            .iter()
-                                            .map(|i| SStringExpr {
-                                                node: StringExpr::Memory { memory: i.clone() },
-                                                span: span.clone(),
-                                            })
-                                            .collect(),
-                                    },
-                                    span: span.clone(),
-                                },
-                            },
-                            span,
-                        };
-                    }
-                    // FallBack is IntCollection
-                    _ => {
-                        return SCollection {
-                            node: Collection::IntCollection {
-                                int: SIntCollection {
-                                    node: IntCollection::Literal {
-                                        ints: ids
-                                            .iter()
-                                            .map(|i| SIntExpr {
-                                                node: IntExpr::Memory { memory: i.clone() },
-                                                span: span.clone(),
-                                            })
-                                            .collect(),
-                                    },
-                                    span: span.clone(),
-                                },
-                            },
-                            span,
-                        };
-                    }
-                }
-            } else {
-                // FallBack is IntCollection
-                return SCollection {
-                    node: Collection::IntCollection {
-                        int: SIntCollection {
-                            node: IntCollection::Literal {
-                                ints: ids
-                                    .iter()
-                                    .map(|i| SIntExpr {
-                                        node: IntExpr::Memory { memory: i.clone() },
-                                        span: span.clone(),
-                                    })
-                                    .collect(),
-                            },
-                            span: span.clone(),
-                        },
-                    },
-                    span,
-                };
-            }
-        }
-    }
-}
-
-pub(crate) fn resolve_memory_type(memory: SUseMemory, span: OwnedSpan, input: Node) -> MemoryType {
-    let mem = match &memory.node {
-        UseMemory::Memory { memory } => &memory.node,
-        UseMemory::WithOwner { memory, owner: _ } => &memory.node,
-    };
-    if let Some(mt) = input.user_data().borrow().memories.get(mem) {
-        match mt {
-            MemType::Int => {
-                return MemoryType::Int {
-                    int: SIntExpr {
-                        node: IntExpr::Memory { memory },
-                        span: span.clone(),
-                    },
-                };
-            }
-            MemType::String => {
-                return MemoryType::String {
-                    string: SStringExpr {
-                        node: StringExpr::Memory { memory },
-                        span: span.clone(),
-                    },
-                };
-            }
-            _ => {
-                let col = resolve_collection_memory(memory, span.clone(), input.clone());
-                let node = match col.node {
-                    Collection::IntCollection { int } => MemoryType::IntCollection { ints: int },
-                    Collection::StringCollection { string } => {
-                        MemoryType::StringCollection { strings: string }
-                    }
-                    Collection::LocationCollection { location } => MemoryType::LocationCollection {
-                        locations: location,
-                    },
-                    Collection::PlayerCollection { player } => {
-                        MemoryType::PlayerCollection { players: player }
-                    }
-                    Collection::TeamCollection { team } => {
-                        MemoryType::TeamCollection { teams: team }
-                    }
-                    Collection::CardSet { card_set } => MemoryType::CardSet {
-                        card_set: *card_set,
-                    },
-                };
-
-                return node;
-            }
-        }
-    }
-
-    // FallBack
-    MemoryType::Int {
-        int: SIntExpr {
-            node: IntExpr::Memory { memory },
-            span: span.clone(),
-        },
-    }
-}
-
-pub(crate) fn resolve_owner_idents(ids: Vec<SID>, span: OwnedSpan, input: Node) -> Owner {
-    let names: Vec<SID> = ids;
-    for name in names.iter() {
-        if let Some(game_type) = input.user_data().borrow().symbols.get(&name.node) {
-            let result = match game_type {
-                GameType::Player => Owner::PlayerCollection {
-                    player_collection: SPlayerCollection {
-                        node: PlayerCollection::Literal {
-                            players: names
-                                .iter()
-                                .map(|n| SPlayerExpr {
-                                    node: PlayerExpr::Literal { name: n.clone() },
-                                    span: span.clone(),
-                                })
-                                .collect(),
-                        },
-                        span: span.clone(),
-                    },
-                },
-                GameType::Team => Owner::TeamCollection {
-                    team_collection: STeamCollection {
-                        node: TeamCollection::Literal {
-                            teams: names
-                                .iter()
-                                .map(|n| STeamExpr {
-                                    node: TeamExpr::Literal { name: n.clone() },
-                                    span: span.clone(),
-                                })
-                                .collect(),
-                        },
-                        span: span.clone(),
-                    },
-                },
-
-                // FallBack
-                _ => Owner::PlayerCollection {
-                    player_collection: SPlayerCollection {
-                        node: PlayerCollection::Literal {
-                            players: names
-                                .iter()
-                                .map(|n| SPlayerExpr {
-                                    node: PlayerExpr::Literal { name: n.clone() },
-                                    span: span.clone(),
-                                })
-                                .collect(),
-                        },
-                        span: span.clone(),
-                    },
-                },
-            };
-
-            return result;
-        }
-    }
-
-    // FallBack
-    Owner::PlayerCollection {
-        player_collection: SPlayerCollection {
-            node: PlayerCollection::Literal {
-                players: names
-                    .iter()
-                    .map(|n| SPlayerExpr {
-                        node: PlayerExpr::Literal { name: n.clone() },
-                        span: span.clone(),
-                    })
-                    .collect(),
-            },
-            span: span.clone(),
-        },
-    }
-}
-
-pub(crate) fn resolve_owner_memory(memory: SUseMemory, span: OwnedSpan, input: Node) -> Owner {
-    let mem = match &memory.node {
-        UseMemory::Memory { memory } => &memory.node,
-        UseMemory::WithOwner { memory, owner: _ } => &memory.node,
-    };
-    if let Some(m) = input.user_data().borrow().memories.get(mem) {
-        let node = match m {
-            MemType::PlayerCollection => Owner::PlayerCollection {
-                player_collection: SPlayerCollection {
-                    node: PlayerCollection::Memory {
-                        memory: memory.clone(),
-                    },
-                    span: span,
-                },
-            },
-            MemType::TeamCollection => Owner::TeamCollection {
-                team_collection: STeamCollection {
-                    node: TeamCollection::Memory {
-                        memory: memory.clone(),
-                    },
-                    span: span,
-                },
-            },
-            // FallBack
-            _ => Owner::PlayerCollection {
-                player_collection: SPlayerCollection {
-                    node: PlayerCollection::Memory {
-                        memory: memory.clone(),
-                    },
-                    span: span,
-                },
-            },
-        };
-
-        return node;
-    }
-
-    // FallBack
-    Owner::PlayerCollection {
-        player_collection: SPlayerCollection {
-            node: PlayerCollection::Memory {
-                memory: memory.clone(),
-            },
-            span: span,
-        },
-    }
-}
-
-fn resolve_use_memory_eq_use_memory(
-    m1: Spanned<UseMemory>,
-    e: OwnedSpan,
-    m2: Spanned<UseMemory>,
-    span: OwnedSpan,
-    input: Node,
-) -> SBoolExpr {
-    let mid = match &m1.node {
-        UseMemory::Memory { memory } => &memory.node,
-        UseMemory::WithOwner { memory, owner: _ } => &memory.node,
-    };
-    let mid1 = match &m2.node {
-        UseMemory::Memory { memory } => &memory.node,
-        UseMemory::WithOwner { memory, owner: _ } => &memory.node,
-    };
-
-    if let Some(ty1) = input.user_data().borrow().memories.get(mid) {
-        if let Some(ty2) = input.user_data().borrow().memories.get(mid1) {
-            if ty1 == ty2 {
-                match ty1 {
-                    MemType::Int => {
-                        let int = SIntExpr {
-                            node: IntExpr::Memory { memory: m1 },
-                            span: span.clone(),
-                        };
-                        let int1 = SIntExpr {
-                            node: IntExpr::Memory { memory: m2 },
-                            span: span.clone(),
-                        };
-                        let int_cmp = SIntCompare {
-                            node: IntCompare::Eq,
-                            span: e,
-                        };
-
-                        return saggregate_compare_bool(
-                            CompareBool::Int {
-                                int,
-                                cmp: int_cmp,
-                                int1,
-                            },
-                            span,
-                        );
-                    }
-                    MemType::String => {
-                        let string = SStringExpr {
-                            node: StringExpr::Memory { memory: m1 },
-                            span: span.clone(),
-                        };
-                        let string1 = SStringExpr {
-                            node: StringExpr::Memory { memory: m2 },
-                            span: span.clone(),
-                        };
-                        let string_cmp = SStringCompare {
-                            node: StringCompare::Eq,
-                            span: e,
-                        };
-
-                        return saggregate_compare_bool(
-                            CompareBool::String {
-                                string,
-                                cmp: string_cmp,
-                                string1,
-                            },
-                            span,
-                        );
-                    }
-                    MemType::CardSet => {
-                        let card_set = SCardSet {
-                            node: CardSet::Memory { memory: m1 },
-                            span: span.clone(),
-                        };
-                        let card_set1 = SCardSet {
-                            node: CardSet::Memory { memory: m2 },
-                            span: span.clone(),
-                        };
-                        let card_set_cmp = SCardSetCompare {
-                            node: CardSetCompare::Eq,
-                            span: e,
-                        };
-
-                        return saggregate_compare_bool(
-                            CompareBool::CardSet {
-                                card_set,
-                                cmp: card_set_cmp,
-                                card_set1,
-                            },
-                            span,
-                        );
-                    }
-                    // FallBack
-                    _ => {}
-                }
-            }
-        }
-    }
-
-    // FallBack
-    let int = SIntExpr {
-        node: IntExpr::Memory { memory: m1 },
-        span: span.clone(),
-    };
-    let int1 = SIntExpr {
-        node: IntExpr::Memory { memory: m2 },
-        span: span.clone(),
-    };
-    let int_cmp = SIntCompare {
-        node: IntCompare::Eq,
-        span: e,
-    };
-
-    saggregate_compare_bool(
-        CompareBool::Int {
-            int,
-            cmp: int_cmp,
-            int1,
-        },
-        span,
-    )
-}
-
-fn resolve_use_memory_neq_use_memory(
-    m1: Spanned<UseMemory>,
-    ne: OwnedSpan,
-    m2: Spanned<UseMemory>,
-    span: OwnedSpan,
-    input: Node,
-) -> SBoolExpr {
-    let mid = match &m1.node {
-        UseMemory::Memory { memory } => &memory.node,
-        UseMemory::WithOwner { memory, owner: _ } => &memory.node,
-    };
-    let mid1 = match &m2.node {
-        UseMemory::Memory { memory } => &memory.node,
-        UseMemory::WithOwner { memory, owner: _ } => &memory.node,
-    };
-
-    if let Some(ty1) = input.user_data().borrow().memories.get(mid) {
-        if let Some(ty2) = input.user_data().borrow().memories.get(mid1) {
-            if ty1 == ty2 {
-                match ty1 {
-                    MemType::Int => {
-                        let int = SIntExpr {
-                            node: IntExpr::Memory { memory: m1 },
-                            span: span.clone(),
-                        };
-                        let int1 = SIntExpr {
-                            node: IntExpr::Memory { memory: m2 },
-                            span: span.clone(),
-                        };
-                        let int_cmp = SIntCompare {
-                            node: IntCompare::Neq,
-                            span: ne,
-                        };
-
-                        return saggregate_compare_bool(
-                            CompareBool::Int {
-                                int,
-                                cmp: int_cmp,
-                                int1,
-                            },
-                            span,
-                        );
-                    }
-                    MemType::String => {
-                        let string = SStringExpr {
-                            node: StringExpr::Memory { memory: m1 },
-                            span: span.clone(),
-                        };
-                        let string1 = SStringExpr {
-                            node: StringExpr::Memory { memory: m2 },
-                            span: span.clone(),
-                        };
-                        let string_cmp = SStringCompare {
-                            node: StringCompare::Neq,
-                            span: ne,
-                        };
-
-                        return saggregate_compare_bool(
-                            CompareBool::String {
-                                string,
-                                cmp: string_cmp,
-                                string1,
-                            },
-                            span,
-                        );
-                    }
-                    MemType::CardSet => {
-                        let card_set = SCardSet {
-                            node: CardSet::Memory { memory: m1 },
-                            span: span.clone(),
-                        };
-                        let card_set1 = SCardSet {
-                            node: CardSet::Memory { memory: m2 },
-                            span: span.clone(),
-                        };
-                        let card_set_cmp = SCardSetCompare {
-                            node: CardSetCompare::Neq,
-                            span: ne,
-                        };
-
-                        return saggregate_compare_bool(
-                            CompareBool::CardSet {
-                                card_set,
-                                cmp: card_set_cmp,
-                                card_set1,
-                            },
-                            span,
-                        );
-                    }
-                    // FallBack
-                    _ => {}
-                }
-            }
-        }
-    }
-
-    // FallBack
-    let int = SIntExpr {
-        node: IntExpr::Memory { memory: m1 },
-        span: span.clone(),
-    };
-    let int1 = SIntExpr {
-        node: IntExpr::Memory { memory: m2 },
-        span: span.clone(),
-    };
-    let int_cmp = SIntCompare {
-        node: IntCompare::Neq,
-        span: ne,
-    };
-
-    saggregate_compare_bool(
-        CompareBool::Int {
-            int,
-            cmp: int_cmp,
-            int1,
-        },
-        span,
-    )
 }

@@ -1,3 +1,5 @@
+// TODO: fix some things like int-collection = int_memory ~ of ~ collection
+
 WHITESPACE = _{ " "+ | "\t" | "\r\n" | "\n" | line_comment | block_comment }
 line_comment = _{ "//" ~ (!"\n" ~ ANY)* }
 block_comment = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
@@ -18,18 +20,61 @@ ident = @{ &capital ~ (alpha | digit)* }
 //////////////////////////
 gamename    = { ident }
 stage       = { ident }
-// create teamname
-cteamname   = { ident }
-teamname    = { ident }
-// create playername
-cplayername = { ident }
-playername  = { ident }
+teamname    = { "T:" ~ ident }
+playername  = { "P:" ~ ident }
 location    = { ident }
 token       = { ident }
 precedence  = { ident }
 combo       = { ident }
 memory      = { ident }
-use_memory  = { "&" ~ "(" ~ memory ~ (kw_of ~ owner)? ~ ")" | "&" ~ memory }
+// Memory-Types
+single_owner = { player_expr | team_expr | kw_table }
+multi_owner = { player_collection | team_collection }
+
+player_memory = { 
+  ( 
+      "(" ~ "&P:" ~ memory ~ kw_of ~ single_owner ~ ")" 
+    | "&P:" ~ memory 
+  ) 
+}
+team_memory = { 
+  (
+      "(" ~ "&T:" ~ memory ~ kw_of ~ single_owner ~ ")" 
+    | "&T:" ~ memory 
+  ) 
+}
+int_memory = { 
+  ( 
+      "(" ~ "&I:" ~ memory ~ kw_of ~ single_owner ~ ")" 
+    | "&I:" ~ memory 
+  ) 
+}
+string_memory = { 
+  ( 
+      "(" ~ "&S:" ~ memory ~ kw_of ~ single_owner ~ ")" 
+    | "&S:" ~ memory
+  ) 
+}
+
+player_collection_memory = { 
+    "(" ~ "&PC:" ~ memory ~ kw_of ~ owner ~ ")" 
+  | "&PC:" ~ memory 
+}
+team_collection_memory = { 
+    "(" ~ "&TC:" ~ memory ~ kw_of ~ owner ~ ")" 
+  | "&TC:" ~ memory 
+}
+string_collection_memory = { 
+    "(" ~ "&SC:" ~ memory ~ kw_of ~ owner ~ ")" 
+  | "&SC:" ~ memory 
+}
+int_collection_memory = { 
+    "(" ~ "&IC:" ~ memory ~ kw_of ~ owner ~ ")" 
+  | "&IC:" ~ memory 
+}
+location_collection_memory = { "(" ~ "&LC:" ~ memory ~ kw_of ~ owner ~ ")" | "&LC:" ~ memory }
+card_set_memory = { "(" ~ "&CS:" ~ memory ~ kw_of ~ owner ~ ")" | "&CS:" ~ memory }
+
 pointmap    = { ident }
 key         = { ident }
 value       = { ident }
@@ -147,14 +192,10 @@ player_name_list = { playername ~ ("," ~ playername)* }
 // Owner
 // =======================
 owner = {
-    // Here to resolve the similar rule
-    use_memory ~ !("[")
-    // Matching No PlayerExpr::CollectionAt
-  | "(" ~ ident ~ ("," ~ ident)* ~ ")" ~ !("[")
-  | player_expr
+    player_expr
+  | team_expr
   | player_collection
   | team_collection
-  | team_expr
   | kw_table
 }
 // =======================
@@ -214,8 +255,9 @@ player_expr = {
   | kw_competitor
   | turnorder_at
   | owner_of_player
-  | playername
   | players_at
+  | playername
+  | player_memory
 }
 // =======================
 
@@ -234,7 +276,6 @@ runtime_int = { kw_stageroundcounter | kw_playroundcounter }
 int_expr = { 
     int
   | int_collection_at
-  | use_memory
   | size_of_collection
   | sum_of_card_set
   | sum_of_int_collection
@@ -242,6 +283,7 @@ int_expr = {
   | extrema_of_int_collection
   | runtime_int
   | bin_int_op
+  | int_memory
 }
 // =======================
 
@@ -253,7 +295,7 @@ string_collection_at = { string_collection ~ "[" ~ int_expr ~ "]" }
 string_expr = { 
     key_of_card_position
   | string_collection_at
-  | use_memory
+  | string_memory
   // The Ident in the language most likely refers to a Value
   | "\"" ~ value ~ "\""
 }
@@ -304,17 +346,13 @@ card_set_empty = { card_set ~ kw_empty }
 bool_expr_binary = { "(" ~ bool_expr ~ bool_op ~ bool_expr ~ ")" }
 bool_expr_unary = { unary_op ~ bool_expr }
 players_out_of = { players ~ kw_out ~ kw_of ~ out_of }
-boundary = _{ &(")" | "and" | "or" | ":" | "{" | EOI) }
 
 cmp_bool = {
-  // handling amiguity with positives
-  // What can come after a BoolExpr: ')', 'and', 'or', ':', '{'
-    use_memory ~ (eq | neq) ~ use_memory ~ boundary
-  | card_set_bool ~ boundary
-  | string_expr_bool ~ boundary
-  | player_expr_bool ~ boundary
-  | team_expr_bool ~ boundary
-  | int_expr_bool ~ boundary
+    card_set_bool
+  | string_expr_bool
+  | player_expr_bool
+  | team_expr_bool
+  | int_expr_bool
 }
 
 bool_expr = {
@@ -346,18 +384,16 @@ status = {
 team_of_player = { kw_team ~ kw_of ~ player_expr }
 
 team_expr = { 
-    team_of_player 
+    team_memory
+  | team_of_player 
   | teamname
 }
 // =======================
 
 // Collection
 // =======================
-collection = { 
-    use_memory
-  | "(" ~ ident ~ ("," ~ ident) ~ ")"
-  | "(" ~ use_memory ~ ("," ~ use_memory) ~ ")"
-  | int_collection
+collection = {
+    int_collection
   | string_collection
   | player_collection
   | team_collection
@@ -373,12 +409,19 @@ collection = {
 
 // IntCollection
 // =======================
-int_collection = { use_memory | "(" ~ int_expr ~ ("," ~ int_expr)* ~ ")" }
+int_collection = { 
+    int_collection_memory
+  | "(" ~ "&I:" ~ memory ~ kw_of ~ multi_owner ~ ")"
+  | "(" ~ int_expr ~ ("," ~ int_expr)* ~ ")"
+}
 // =======================
 
 // StringCollection
 // =======================
-string_collection = { use_memory | "(" ~ string_expr ~ ("," ~ string_expr)* ~ ")" }
+string_collection = { 
+    string_collection_memory
+  | "(" ~ "&S:" ~ memory ~ kw_of ~ multi_owner ~ ")"
+  | "(" ~ string_expr ~ ("," ~ string_expr)* ~ ")" }
 // =======================
 
 // Quantifier
@@ -393,8 +436,9 @@ quantifier = {
 player_expr_collection = { "(" ~ player_expr ~ ("," ~ player_expr )* ~ ")" }
 
 player_collection = {  
-    use_memory
-  | player_expr_collection
+    player_expr_collection
+  | player_collection_memory
+  | "(" ~ "&P:" ~ memory ~ kw_of ~ multi_owner ~ ")"
   | kw_others
   | quantifier 
   | kw_playersout 
@@ -408,15 +452,16 @@ team_expr_collection = { "(" ~ team_expr ~ ("," ~ team_expr)* ~ ")" }
 other_teams = { kw_other ~ kw_teams }
 
 team_collection = {  
-    use_memory
-  | team_expr_collection
+    team_expr_collection
+  | team_collection_memory
+  | "(" ~ "&T:" ~ memory ~ kw_of ~ multi_owner ~ ")"
   | other_teams
 }
 // =======================
 
 // LocationCollection
 // =======================
-location_collection = { use_memory | "(" ~ location ~ ("," ~ location)* ~ ")" }
+location_collection = { location_collection_memory | "(" ~ location ~ ("," ~ location)* ~ ")" }
 // =======================
 
 //////////////////////////
@@ -456,8 +501,8 @@ until_end = { kw_until ~ kw_end }
 
 end_condition = { 
     until_end
-  | until_repetitions
   | until_bool_repetitions
+  | until_repetitions
   | until_bool
 }
 // =======================
@@ -518,13 +563,13 @@ action_rule = {
 
 // CreatePlayer
 // =======================
-create_player_names = { playername ~ ("," ~ playername)* }
+create_player_names = { ident ~ ("," ~ ident)* }
 create_player = { kw_player ~ create_player_names }
 // =======================
 
 // CreateTeam
 // =======================
-team_name_with_player_collection = { teamname ~ kw_with ~ player_collection }
+team_name_with_player_collection = { ident ~ kw_with ~ player_collection }
 create_team = { kw_team ~ team_name_with_player_collection ~ ("," ~ team_name_with_player_collection)* }
 // =======================
 
@@ -567,7 +612,7 @@ create_combo = { kw_combo ~ combo ~ kw_where ~ filter_expr }
 // CreateMemory
 // =======================
 // Check if a slice of the memory is there (IntCollection and StringCollection)
-memory_type = { (use_memory ~ !("[") | int_expr | string_expr | collection) }
+memory_type = { (int_expr | string_expr | collection) }
 // can not initialize a memory with a memory!
 create_memory = { kw_memory ~ memory ~ (memory_type)? ~ kw_on ~ owner }
 // =======================
@@ -718,9 +763,8 @@ int_range = { int_compare ~ int_expr ~ int_range_helper* }
 group_of_owner = { group ~ kw_of ~ owner }
 
 card_set = {
-    group_of_owner 
-  | use_memory ~ (!kw_where)
-  // Guard
+    card_set_memory
+  | group_of_owner 
   | group 
 }
 // =======================

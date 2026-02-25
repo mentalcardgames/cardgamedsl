@@ -100,6 +100,19 @@ pub mod ast {
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
+    pub enum UseSingleMemory {
+        Memory { 
+            #[arbitrary(with = gen_ident)]
+            memory: String
+        },
+        WithOwner { 
+            #[arbitrary(with = gen_ident)]
+            memory: String,
+            owner: Box<SingleOwner>
+        },
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum Extrema {
         Min,
         Max,
@@ -125,12 +138,26 @@ pub mod ast {
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
+    pub enum SingleOwner {
+        Player { player: PlayerExpr },
+        Team{ team: TeamExpr},
+        Table,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
+    pub enum MultiOwner {
+        PlayerCollection { player_collection: Box<PlayerCollection>},
+        TeamCollection { team_collection: Box<TeamCollection> },
+    }
+
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum Owner {
         Player { player: PlayerExpr },
-        PlayerCollection { player_collection: PlayerCollection},
         Team{ team: TeamExpr},
-        TeamCollection {team_collection: TeamCollection},
         Table,
+        PlayerCollection { player_collection: PlayerCollection},
+        TeamCollection {team_collection: TeamCollection},
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
@@ -257,6 +284,7 @@ pub mod ast {
         Runtime {runtime: RuntimePlayer},
         Aggregate {aggregate: AggregatePlayer},
         Query {query: QueryPlayer},
+        Memory { memory: UseSingleMemory },
     }
     // ===========================================================================
 
@@ -299,7 +327,7 @@ pub mod ast {
         Aggregate {aggregate: AggregateInt},
         Runtime {runtime: RuntimeInt },
         Memory { 
-            memory: UseMemory,
+            memory: UseSingleMemory,
         },
     }
     // ===========================================================================
@@ -324,7 +352,7 @@ pub mod ast {
             value: String
         },
         Query {query: QueryString},
-        Memory { memory: UseMemory },
+        Memory { memory: UseSingleMemory },
     }
     // ===========================================================================
 
@@ -406,6 +434,7 @@ pub mod ast {
             name: String
         },
         Aggregate{ aggregate: AggregateTeam},
+        Memory { memory: UseSingleMemory }
     }
     // ===========================================================================
 
@@ -480,6 +509,11 @@ pub mod ast {
             #[arbitrary(with = gen_vec_min_1_ints)]
             ints: Vec<IntExpr>
         },
+        AggregateMemory {
+            #[arbitrary(with = gen_ident)]
+            memory: String,
+            multi: MultiOwner
+        },
         Memory { 
             memory: UseMemory
         },
@@ -490,6 +524,11 @@ pub mod ast {
         Literal { 
             #[arbitrary(with = gen_vec_min_1)]
             strings: Vec<StringExpr>
+        },
+        AggregateMemory {
+            #[arbitrary(with = gen_ident)]
+            memory: String,
+            multi: MultiOwner
         },
         Memory { 
             memory: UseMemory
@@ -528,6 +567,9 @@ pub mod ast {
         },
         Aggregate { aggregate: AggregatePlayerCollection },
         Runtime { runtime: RuntimePlayerCollection },
+        AggregateMemory {
+            memory: String, multi: MultiOwner
+        },
         Memory { memory: UseMemory },
     }
     // ===========================================================================
@@ -546,6 +588,9 @@ pub mod ast {
             teams: Vec<TeamExpr> 
         },
         Runtime {runtime: RuntimeTeamCollection },
+        AggregateMemory {
+            memory: String, multi: MultiOwner
+        },
         Memory { memory: UseMemory },
     }
 

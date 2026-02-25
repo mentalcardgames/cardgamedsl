@@ -33,13 +33,13 @@ pub fn gen_ident(u: &mut Unstructured) -> arbitrary::Result<String> {
 
 // Helper function to generate a safe alphanumeric identifier
 pub fn gen_player_name(u: &mut Unstructured) -> Result<String> {
-    // Ok(format!("P{}", gen_ident(u)?))
+    // Ok(format!("P:{}", gen_ident(u)?))
     gen_ident(u)
 }
 
 // Helper function to generate a safe alphanumeric identifier
 pub fn gen_team_name(u: &mut Unstructured) -> Result<String> {
-    // Ok(format!("T{}", gen_ident(u)?))
+    // Ok(format!("T:{}", gen_ident(u)?))
     gen_ident(u)
 }
 
@@ -290,11 +290,15 @@ impl<'a> Arbitrary<'a> for IntExpr {
             0..=20 => Ok(IntExpr::Literal {
                 int: u.arbitrary()?,
             }),
-            21..=40 => Ok(IntExpr::Memory {
-                memory: UseMemory::Memory {
-                    memory: gen_ident(u)?,
-                },
-            }),
+            21..=30 => {
+                Ok(
+                    IntExpr::Memory {
+                        memory: UseSingleMemory::Memory {
+                            memory: gen_ident(u)?,
+                        },
+                    }
+                )
+            },
             41..=55 => Ok(IntExpr::Runtime {
                 runtime: u.arbitrary()?,
             }),
@@ -328,8 +332,12 @@ impl<'a> Arbitrary<'a> for PlayerExpr {
         // over complex Queries or Aggregates, which helps keep the AST size stable.
         match u.int_in_range(0..=100)? {
             // 40% chance for a literal name
-            0..=39 => Ok(PlayerExpr::Literal {
+            0..=30 => Ok(PlayerExpr::Literal {
                 name: gen_player_name(u)?,
+            }),
+            // 30% chance for simple runtime (Current, Next, etc.)
+            31..=39 => Ok(PlayerExpr::Memory {
+                memory: UseSingleMemory::Memory { memory: gen_ident(u)? }
             }),
             // 30% chance for simple runtime (Current, Next, etc.)
             40..=69 => Ok(PlayerExpr::Runtime {
@@ -363,7 +371,7 @@ impl<'a> Arbitrary<'a> for StringExpr {
             }),
             // 70% chance for a Literal identifier
             36..=69 => Ok(StringExpr::Memory {
-                memory: UseMemory::Memory {
+                memory: UseSingleMemory::Memory {
                     memory: gen_ident(u)?,
                 },
             }),
@@ -507,11 +515,17 @@ impl<'a> Arbitrary<'a> for PlayerCollection {
                 runtime: u.arbitrary()?,
             }),
             // 70% chance for a Literal identifier
-            21..=39 => Ok(PlayerCollection::Memory {
+            21..=30 => Ok(PlayerCollection::Memory {
                 memory: UseMemory::Memory {
                     memory: gen_ident(u)?,
                 },
             }),
+            31..=39 => Ok(
+                PlayerCollection::AggregateMemory {
+                    memory: gen_ident(u)?,
+                    multi: u.arbitrary()?,
+                }
+            ),
             // 40% chance for Literal (Uses our safe vec generator)
             40..=79 => Ok(PlayerCollection::Literal {
                 players: gen_vec_min_1_players(u)?,
@@ -562,11 +576,17 @@ impl<'a> Arbitrary<'a> for TeamCollection {
                 runtime: u.arbitrary()?,
             }),
             // 70% chance for a Literal identifier
-            21..=39 => Ok(TeamCollection::Memory {
+            21..=30 => Ok(TeamCollection::Memory {
                 memory: UseMemory::Memory {
                     memory: gen_ident(u)?,
                 },
             }),
+            31..=39 => Ok(
+                TeamCollection::AggregateMemory {
+                    memory: gen_ident(u)?,
+                    multi: u.arbitrary()?,
+                }
+            ),
 
             // 60% chance for Literal (Uses our safe vec generator)
             _ => Ok(TeamCollection::Literal {

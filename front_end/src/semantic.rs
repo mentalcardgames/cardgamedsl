@@ -273,13 +273,13 @@ impl AstPass for SemanticVisitor {
                     match s {
                         StringExpr::Memory { memory } => {
                             match &memory.node {
-                                UseMemory::Memory { memory: mem } => {
+                                UseSingleMemory::Memory { memory: mem } => {
                                     self.memories.push((
                                         mem.node.clone(),
                                         (MemType::String, mem.span.clone()),
                                     ));
                                 }
-                                UseMemory::WithOwner {
+                                UseSingleMemory::WithOwner {
                                     memory: mem,
                                     owner: _,
                                 } => {
@@ -298,11 +298,11 @@ impl AstPass for SemanticVisitor {
                     match s {
                         IntExpr::Memory { memory } => {
                             match &memory.node {
-                                UseMemory::Memory { memory: mem } => {
+                                UseSingleMemory::Memory { memory: mem } => {
                                     self.memories
                                         .push((mem.node.clone(), (MemType::Int, mem.span.clone())));
                                 }
-                                UseMemory::WithOwner {
+                                UseSingleMemory::WithOwner {
                                     memory: mem,
                                     owner: _,
                                 } => {
