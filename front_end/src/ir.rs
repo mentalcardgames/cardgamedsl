@@ -519,7 +519,7 @@ impl IrBuilder<SpannedPayload> {
                 // Function is just seq stage
                 self.build_sim_stage(&stage.node, entry, exit)
             }
-            FlowComponent::Rule { game_rule } => {
+            FlowComponent::GameRule { game_rule } => {
                 // Can have GameFlowChanges! So return here.
                 return self.build_rule(game_rule, entry, exit);
             }
@@ -853,11 +853,8 @@ impl IrBuilder<SpannedPayload> {
         for i in 0..cond_rule.cases.len() {
             case_exit = if i == _len { exit } else { self.new_state() };
             match &cond_rule.cases[i].node {
-                // Case::Else { flows: spanneds } => {
-                //   self.build_flows(&spanneds, next_entry, case_exit);
-                // },
                 Case::NoBool { flows: spanneds } => {
-                    self.build_flows(&spanneds, next_entry, case_exit);
+                    self.build_flows(&spanneds, next_entry, exit);
                 }
                 Case::Bool {
                     bool_expr: spanned,
@@ -885,7 +882,7 @@ impl IrBuilder<SpannedPayload> {
                         None,
                     );
 
-                    self.build_flows(&spanneds, body, case_exit);
+                    self.build_flows(&spanneds, body, exit);
                 }
             }
 

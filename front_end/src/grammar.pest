@@ -271,7 +271,7 @@ sum_of_int_collection = { kw_sum ~ "(" ~ int_collection ~ ")" }
 sum_of_card_set = { kw_sum ~ kw_of ~ card_set ~ kw_using ~ pointmap}
 int_extrema_of_card_set = { extrema ~ kw_of ~ card_set ~ kw_using ~ pointmap}
 extrema_of_int_collection = { extrema ~ "(" ~ int_collection ~ ")" }
-runtime_int = { kw_stageroundcounter | kw_playroundcounter }
+runtime_int = { kw_stageroundcounter ~ kw_of ~ stage | kw_stageroundcounter }
 
 int_expr = { 
     int
@@ -334,7 +334,7 @@ int_compare = {
   | lt
 }
 
-out_of = { kw_stage | stage | kw_game }
+out_of = { kw_stage | stage | kw_game ~ kw_successful | kw_game ~ kw_fail | kw_game }
 card_set_bool = { card_set ~ card_set_compare ~ card_set }
 string_expr_bool = { string_expr ~ string_expr_compare ~ string_expr }
 string_card_set = { string_expr ~ (kw_not)? ~ kw_in ~ card_set }
@@ -612,7 +612,7 @@ create_combo = { kw_combo ~ combo ~ kw_where ~ filter_expr }
 // CreateMemory
 // =======================
 // Check if a slice of the memory is there (IntCollection and StringCollection)
-memory_type = { (int_expr | string_expr | collection) }
+memory_type = { (int_expr | string_expr | player_expr | team_expr | collection) }
 // can not initialize a memory with a memory!
 create_memory = { kw_memory ~ memory ~ (memory_type)? ~ kw_on ~ owner }
 // =======================
@@ -696,7 +696,7 @@ shuffle_action = { kw_shuffle ~ card_set }
 
 // OutAction
 // =======================
-out_action = { kw_set ~ players ~ kw_out ~ kw_of ~ (kw_stage | kw_game ~ kw_successful | kw_game ~ kw_fail) }
+out_action = { kw_set ~ players ~ kw_out ~ kw_of ~ out_of }
 // =======================
 
 // SetMemory

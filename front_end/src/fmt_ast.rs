@@ -2,26 +2,6 @@ use core::fmt;
 
 use crate::ast::*;
 
-impl fmt::Display for BinCompare {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            BinCompare::Eq => "==",
-            BinCompare::Neq => "!=",
-        };
-        f.write_str(s)
-    }
-}
-
-impl fmt::Display for LogicBinOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            LogicBinOp::And => "and",
-            LogicBinOp::Or => "or",
-        };
-        f.write_str(s)
-    }
-}
-
 impl fmt::Display for IntOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
@@ -65,6 +45,8 @@ impl fmt::Display for OutOf {
             OutOf::CurrentStage => "stage",
             OutOf::Stage { name: stage } => stage,
             OutOf::Game => "game",
+            OutOf::GameSuccessful => "game successful",
+            OutOf::GameFail => "game fail",
         };
         f.write_str(s)
     }
@@ -177,6 +159,8 @@ impl fmt::Display for MemoryType {
             MemoryType::String {
                 string: string_expr,
             } => &format!("{}", string_expr),
+            MemoryType::Player { player } => &format!("{}", player),
+            MemoryType::Team { team } => &format!("{}", team),
             MemoryType::StringCollection { strings } => &format!("{}", strings),
             MemoryType::IntCollection { ints } => &format!("{}", ints),
             MemoryType::PlayerCollection { players } => &format!("{}", players),
@@ -376,8 +360,8 @@ impl fmt::Display for AggregateInt {
 impl fmt::Display for RuntimeInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            RuntimeInt::StageRoundCounter => "stageroundcounter",
-            RuntimeInt::PlayRoundCounter => "playroundcounter",
+            RuntimeInt::CurrentStageRoundCounter => "stageroundcounter",
+            RuntimeInt::StageRoundCounter { stage } => &format!("stageroundcounter of {}", stage),
         };
         f.write_str(s)
     }
@@ -1051,14 +1035,8 @@ impl fmt::Display for ActionRule {
                 &format!("flip {} to {}", card_set, status)
             }
             ActionRule::ShuffleAction { card_set } => &format!("shuffle {}", card_set),
-            ActionRule::PlayerOutOfStageAction { players } => {
-                &format!("set {} out of stage", players)
-            }
-            ActionRule::PlayerOutOfGameSuccAction { players } => {
-                &format!("set {} out of game successful", players)
-            }
-            ActionRule::PlayerOutOfGameFailAction { players } => {
-                &format!("set {} out of game fail", players)
+            ActionRule::OutAction { players, out_of } => {
+                &format!("set {} out of {}", players, out_of)
             }
             ActionRule::SetMemory {
                 memory,
@@ -1407,7 +1385,7 @@ impl fmt::Display for FlowComponent {
         let s = match self {
             FlowComponent::SeqStage { stage } => &format!("{}", stage),
             FlowComponent::SimStage { stage } => &format!("{}", stage),
-            FlowComponent::Rule { game_rule } => &format!("{}", game_rule),
+            FlowComponent::GameRule { game_rule } => &format!("{}", game_rule),
             FlowComponent::IfRule { if_rule } => &format!("{}", if_rule),
             FlowComponent::ChoiceRule { choice_rule } => &format!("{}", choice_rule),
             FlowComponent::OptionalRule { optional_rule } => &format!("{}", optional_rule),

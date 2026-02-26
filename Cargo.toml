@@ -1,4 +1,5 @@
 [workspace]
+license = "MIT"
 resolver = "3"
 members = [
     "front_end",

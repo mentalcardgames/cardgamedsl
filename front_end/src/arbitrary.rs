@@ -216,7 +216,7 @@ pub fn gen_flows_safe(u: &mut arbitrary::Unstructured) -> arbitrary::Result<Vec<
     // If we have very little gas, return a single, simple action.
     // "EndTurn" or a similar trivial rule is best here to stop the recursion.
     if remaining < 128 {
-        return Ok(vec![FlowComponent::Rule {
+        return Ok(vec![FlowComponent::GameRule {
             game_rule: GameRule::Action {
                 action: ActionRule::EndAction {
                     end_type: EndType::Turn,
@@ -234,7 +234,7 @@ pub fn gen_flows_safe(u: &mut arbitrary::Unstructured) -> arbitrary::Result<Vec<
     for _ in 0..count {
         // Check entropy again inside the loop
         if u.len() < 64 {
-            flows.push(FlowComponent::Rule {
+            flows.push(FlowComponent::GameRule {
                 game_rule: GameRule::Action {
                     action: ActionRule::EndAction {
                         end_type: EndType::Turn,
@@ -248,7 +248,7 @@ pub fn gen_flows_safe(u: &mut arbitrary::Unstructured) -> arbitrary::Result<Vec<
         // (like Sequences or Loops) if entropy is dropping.
         let component = if u.len() < 256 {
             // Force a non-recursive Rule or simple leaf
-            FlowComponent::Rule {
+            FlowComponent::GameRule {
                 game_rule: u.arbitrary()?,
             }
         } else {

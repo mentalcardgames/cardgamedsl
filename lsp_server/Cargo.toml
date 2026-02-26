@@ -2,6 +2,7 @@
 name = "lsp_server"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
 
 [dependencies]
 front_end = { path = "../front_end" }

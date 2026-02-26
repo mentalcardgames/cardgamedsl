@@ -14,7 +14,6 @@ use std::{collections::HashMap, fmt};
 
 use crate::{
     ast::ast_spanned::{NodeKind, *},
-    parser::MemType,
     spans::OwnedSpan,
     symbols::Var,
     walker::AstPass,
@@ -42,11 +41,27 @@ pub enum CorrespondanceType {
     Key { node: String },
 }
 
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
+pub enum MemType {
+    Int,
+    String,
+    Player,
+    Team,
+    PlayerCollection,
+    StringCollection,
+    IntCollection,
+    TeamCollection,
+    LocationCollection,
+    CardSet,
+}
+
 impl fmt::Display for MemType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
             MemType::Int => "Int",
             MemType::String => "String",
+            MemType::Player => "Player",
+            MemType::Team => "Team",
             MemType::PlayerCollection => "PlayerCollection",
             MemType::StringCollection => "StringCollection",
             MemType::IntCollection => "IntCollection",
@@ -719,6 +734,8 @@ fn memory_type_to_mem_type(mt: &MemoryType) -> MemType {
     match mt {
         MemoryType::Int { int: _ } => MemType::Int,
         MemoryType::String { string: _ } => MemType::String,
+        MemoryType::Player { player: _ } => MemType::Player,
+        MemoryType::Team { team: _ } => MemType::Team,
         MemoryType::PlayerCollection { players: _ } => MemType::PlayerCollection,
         MemoryType::StringCollection { strings: _ } => MemType::StringCollection,
         MemoryType::TeamCollection { teams: _ } => MemType::TeamCollection,

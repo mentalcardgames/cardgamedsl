@@ -13,14 +13,12 @@
   by doing: Generate AST -> String-Represenation -> Parse -> assert_eq Generated-AST and Parse-Output
 */
 
-use std::cell::RefCell;
 use std::path::Path;
 use std::process::Command;
 
 use crate::fsm_to_dot::fsm_to_dot;
 use crate::ir::{Ir, IrBuilder, SpannedPayload};
 use crate::lower::Lower;
-use crate::parser::SymbolTable;
 use crate::parser::{CGDSLParser, Node, Result, Rule};
 use crate::walker::*;
 use pest_consume::*;
@@ -31,17 +29,14 @@ where
     F: FnOnce(Node) -> Result<T>,
     T: Walker,
 {
-    // 1. Initialize the state your Node alias expects
-    let state = RefCell::new(SymbolTable::default());
-
-    // 2. Use parse_with_userdata instead of parse
+    // 1. Use parse_with_userdata instead of parse
     // This ensures the Nodes contain RefCell<SymbolTable> instead of ()
-    let nodes = CGDSLParser::parse_with_userdata(rule, input, state)?;
+    let nodes = CGDSLParser::parse(rule, input)?;
 
-    // 3. Extract Single Node
+    // 2. Extract Single Node
     let node = nodes.single()?;
 
-    // 4. Mapping
+    // 3. Mapping
     let parsed_ast = mapper(node)?;
 
     Ok(parsed_ast)
@@ -51,7 +46,6 @@ pub fn test_rule_consume_with_table<T, F>(
     input: &str,
     rule: Rule,
     mapper: F,
-    table: SymbolTable,
 ) -> Result<T>
 // Returns pest_consume::Result
 where
@@ -61,7 +55,7 @@ where
 {
     // 2. Use parse_with_userdata instead of parse
     // This ensures the Nodes contain RefCell<SymbolTable> instead of ()
-    let nodes = CGDSLParser::parse_with_userdata(rule, input, RefCell::new(table))?;
+    let nodes = CGDSLParser::parse(rule, input)?;
 
     // 3. Extract Single Node
     let node = nodes.single()?;
@@ -213,7 +207,7 @@ fn test_conditional_ir() {
     let fsm = build_ir_from(
         "
     conditional {
-      case:
+      case Hand empty:
         move top(Discard) private to Hand
       case Hand empty:
         move top(Stock) private to Hand

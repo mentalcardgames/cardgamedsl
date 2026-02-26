@@ -2,11 +2,7 @@
     This is the Parsing logic. We use a "direct to AST"-parsing method.
     The library used are pest and especially pest_consume.
 
-    The Grammar is in some parts ambiguous so a Symbol-Table is added (is doable with pest_consume)
-    to resolve the ambiguous Rules (e.g. Collection: "(" ident ("," ident)* ")" is matched by multiple
-    collections: LocationCollection, PlayerCollection, TeamCollection)
-
-    It might make sense to use (or return to) a Sigil-style type naming in the future to get rid of ambiguity:
+    We use (or return to) a Sigil-style type naming in the future to get rid of ambiguity:
     - Players start with "P"
     - Teams start with "T"
     - Combos start with "C"
@@ -16,12 +12,7 @@
     > ...
 
     This would make the parsing very dumb and easy to extend.
-
-    However if no more ambiguity comes forth that we can keep this approach.
 */
-
-use std::cell::RefCell;
-use std::collections::HashMap;
 
 use pest_consume::{Parser, match_nodes};
 
@@ -34,36 +25,7 @@ pub struct CGDSLParser;
 
 use pest_consume::Error;
 pub type Result<T> = std::result::Result<T, Error<Rule>>;
-pub type Node<'i> = pest_consume::Node<'i, Rule, RefCell<SymbolTable>>;
-
-#[derive(Debug, PartialEq, Clone, Hash, Eq)]
-pub enum MemType {
-    Int,
-    String,
-    PlayerCollection,
-    StringCollection,
-    IntCollection,
-    TeamCollection,
-    LocationCollection,
-    CardSet,
-}
-
-use crate::symbols::GameType;
-
-#[derive(Clone, Debug)]
-pub struct SymbolTable {
-    pub symbols: HashMap<String, GameType>,
-    pub memories: HashMap<String, MemType>,
-}
-
-impl Default for SymbolTable {
-    fn default() -> Self {
-        SymbolTable {
-            symbols: HashMap::new(),
-            memories: HashMap::new(),
-        }
-    }
-}
+pub type Node<'i> = pest_consume::Node<'i, Rule, ()>;
 
 #[pest_consume::parser]
 impl CGDSLParser {
@@ -105,7 +67,7 @@ impl CGDSLParser {
                 [choice_rule(t)] => FlowComponent::ChoiceRule { choice_rule: t },
                 [optional_rule(l)] => FlowComponent::OptionalRule { optional_rule: l },
                 [trigger_rule(l)] => FlowComponent::TriggerRule { trigger_rule: l },
-                [game_rule(k)] => FlowComponent::Rule { game_rule: k },
+                [game_rule(k)] => FlowComponent::GameRule { game_rule: k },
                 [cond_rule(k)] => FlowComponent::Conditional { conditional: k },
         );
 
@@ -259,16 +221,6 @@ impl CGDSLParser {
         Ok(SRepititions { node: node, span })
     }
 
-    pub(crate) fn logical_compare(input: Node) -> Result<SLogicBinOp> {
-        let span = OwnedSpan::from(input.as_span());
-        let node = match_nodes!(input.into_children();
-            [kw_and(_)] => LogicBinOp::And,
-            [kw_or(_)] => LogicBinOp::Or,
-        );
-
-        Ok(SLogicBinOp { node: node, span })
-    }
-
     pub(crate) fn kw_until(input: Node) -> Result<()> {
         Ok(())
     }
@@ -289,7 +241,7 @@ impl CGDSLParser {
     pub(crate) fn until_bool_repetitions(input: Node) -> Result<SEndCondition> {
         let span = OwnedSpan::from(input.as_span());
         let node = match_nodes!(input.into_children();
-            [kw_until(_), bool_expr(b), logical_compare(l), repetitions(r)] => EndCondition::UntilBoolRep { bool_expr: b, logic: l, reps: r},
+            [kw_until(_), bool_expr(b), bool_op(l), repetitions(r)] => EndCondition::UntilBoolRep { bool_expr: b, logic: l, reps: r},
         );
 
         Ok(SEndCondition { node: node, span })
@@ -685,11 +637,11 @@ impl CGDSLParser {
     pub(crate) fn runtime_int(input: Node) -> Result<SIntExpr> {
         let span = OwnedSpan::from(input.as_span());
         let node = match_nodes!(input.into_children();
-            [kw_stageroundcounter(_)] => {
-                sruntime_int(RuntimeInt::StageRoundCounter, span.clone())
+            [kw_stageroundcounter(_), kw_of(_), stage(s)] => {
+                sruntime_int(RuntimeInt::StageRoundCounter { stage: s }, span.clone())
             },
-            [kw_playroundcounter(_)] => {
-                sruntime_int(RuntimeInt::PlayRoundCounter, span.clone())
+            [kw_stageroundcounter(_)] => {
+                sruntime_int(RuntimeInt::CurrentStageRoundCounter, span.clone())
             }
         );
 
@@ -1016,6 +968,8 @@ impl CGDSLParser {
         let node = match_nodes!(input.into_children();
             [kw_stage(_)] => OutOf::CurrentStage,
             [stage(n)] => OutOf::Stage { name: n },
+            [kw_game(_), kw_successful(_)] => OutOf::GameSuccessful,
+            [kw_game(_), kw_fail(_)] => OutOf::GameFail,
             [kw_game(_)] => OutOf::Game,
         );
 
@@ -1031,7 +985,7 @@ impl CGDSLParser {
 
     pub(crate) fn cmp_bool(input: Node) -> Result<SBoolExpr> {
         let span = OwnedSpan::from(input.as_span());
-        let node = match_nodes!(input.clone().into_children();
+        let node = match_nodes!(input.into_children();
             [players(n), kw_out(_), kw_of(_), out_of(s)] => saggregate_bool(AggregateBool::OutOfPlayer { players: n, out_of: s }, span),
             [card_set_bool(n)] => n,
             [string_expr_bool(n)] => n,
@@ -1417,7 +1371,7 @@ impl CGDSLParser {
 
     pub(crate) fn owner(input: Node) -> Result<SOwner> {
         let span = OwnedSpan::from(input.as_span());
-        let node = match_nodes!(input.clone().into_children();
+        let node = match_nodes!(input.into_children();
             [player_expr(n)] => Owner::Player { player: n },
             [player_collection(n)] => Owner::PlayerCollection { player_collection: n },
             [team_expr(n)] => Owner::Team { team: n },
@@ -1456,7 +1410,7 @@ impl CGDSLParser {
 
     pub(crate) fn collection(input: Node) -> Result<SCollection> {
         let span = OwnedSpan::from(input.as_span());
-        Ok(match_nodes!(input.clone().into_children();
+        Ok(match_nodes!(input.into_children();
             [int_collection(n)] => SCollection {node: Collection::IntCollection { int: n }, span},
             [string_collection(n)] => SCollection {node: Collection::StringCollection { string: n }, span},
             [player_collection(n)] => SCollection {node: Collection::PlayerCollection { player: n }, span},
@@ -1542,8 +1496,7 @@ impl CGDSLParser {
 
     pub(crate) fn create_player_names(input: Node) -> Result<Vec<SID>> {
         Ok(
-            // TODO: Resolve Cloning later if possibler
-            match_nodes!(input.clone().into_children();
+            match_nodes!(input.into_children();
                 [ident(players)..] => players.collect(),
             ),
         )
@@ -1553,7 +1506,7 @@ impl CGDSLParser {
         input: Node,
     ) -> Result<(SID, SPlayerCollection)> {
         Ok(
-            match_nodes!(input.clone().into_children();
+            match_nodes!(input.into_children();
                 [ident(teamname), kw_with(_), player_collection(p)] => (teamname, p),
             ),
         )
@@ -1631,13 +1584,8 @@ impl CGDSLParser {
 
     pub(crate) fn create_location(input: Node) -> Result<SSetUpRule> {
         let span = OwnedSpan::from(input.as_span());
-        let node = match_nodes!(input.clone().into_children();
-            [kw_location(_), location_list(l), kw_on(_), owner(o)] => {
-                for loc in l.iter() {
-                    input.user_data().borrow_mut().symbols.insert(loc.node.clone(), GameType::Location);
-                }
-                SetUpRule::CreateLocation { locations: l, owner: o }
-            },
+        let node = match_nodes!(input.into_children();
+            [kw_location(_), location_list(l), kw_on(_), owner(o)] => SetUpRule::CreateLocation { locations: l, owner: o },
         );
 
         Ok(SSetUpRule { node: node, span })
@@ -1737,36 +1685,8 @@ impl CGDSLParser {
 
     pub(crate) fn create_memory(input: Node) -> Result<SSetUpRule> {
         let span = OwnedSpan::from(input.as_span());
-        let node = match_nodes!(input.clone().into_children();
-            [kw_memory(_), memory(memory), memory_type(mt), kw_on(_), owner(o)] => {
-                match &mt.node {
-                    MemoryType::String { string: _ } => {
-                        input.user_data().borrow_mut().memories.insert(memory.node.clone(), MemType::String);
-                    },
-                    MemoryType::Int { int: _ } => {
-                        input.user_data().borrow_mut().memories.insert(memory.node.clone(), MemType::Int);
-                    },
-                    MemoryType::TeamCollection { teams: _ } => {
-                        input.user_data().borrow_mut().memories.insert(memory.node.clone(), MemType::TeamCollection);
-                    },
-                    MemoryType::PlayerCollection { players: _ } => {
-                        input.user_data().borrow_mut().memories.insert(memory.node.clone(), MemType::PlayerCollection);
-                    },
-                    MemoryType::LocationCollection { locations: _ } => {
-                        input.user_data().borrow_mut().memories.insert(memory.node.clone(), MemType::LocationCollection);
-                    },
-                    MemoryType::StringCollection { strings: _ } => {
-                        input.user_data().borrow_mut().memories.insert(memory.node.clone(), MemType::StringCollection);
-                    },
-                    MemoryType::IntCollection { ints: _ } => {
-                        input.user_data().borrow_mut().memories.insert(memory.node.clone(), MemType::IntCollection);
-                    },
-                    MemoryType::CardSet { card_set: _ } => {
-                        input.user_data().borrow_mut().memories.insert(memory.node.clone(), MemType::CardSet);
-                    },
-                }
-                SetUpRule::CreateMemoryWithMemoryType { memory: memory, memory_type: mt, owner: o }
-            },
+        let node = match_nodes!(input.into_children();
+            [kw_memory(_), memory(memory), memory_type(mt), kw_on(_), owner(o)] => SetUpRule::CreateMemoryWithMemoryType { memory: memory, memory_type: mt, owner: o },
             [kw_memory(_), memory(memory), kw_on(_), owner(o)] => SetUpRule::CreateMemory { memory: memory, owner: o },
         );
 
@@ -1872,9 +1792,11 @@ impl CGDSLParser {
 
     pub(crate) fn memory_type(input: Node) -> Result<SMemoryType> {
         let span = OwnedSpan::from(input.as_span());
-        let node = match_nodes!(input.clone().into_children();
+        let node = match_nodes!(input.into_children();
             [int_expr(i)] => MemoryType::Int { int: i },
             [string_expr(s)] => MemoryType::String { string: s },
+            [player_expr(p)] => MemoryType::Player { player: p },
+            [team_expr(t)] => MemoryType::Team { team: t },
             [collection(c)] => {
                 match c.node {
                     Collection::IntCollection { int } =>  MemoryType::IntCollection { ints: int },
@@ -1893,9 +1815,7 @@ impl CGDSLParser {
     pub(crate) fn out_action(input: Node) -> Result<SActionRule> {
         let span = OwnedSpan::from(input.as_span());
         let node = match_nodes!(input.into_children();
-            [kw_set(_), players(p), kw_out(_), kw_of(_), kw_stage(_)] => ActionRule::PlayerOutOfStageAction { players: p },
-            [kw_set(_), players(p), kw_out(_), kw_of(_), kw_game(_), kw_successful(_)] => ActionRule::PlayerOutOfGameSuccAction { players: p },
-            [kw_set(_), players(p), kw_out(_), kw_of(_), kw_game(_), kw_fail(_)] => ActionRule::PlayerOutOfGameFailAction { players: p },
+            [kw_set(_), players(p), kw_out(_), kw_of(_), out_of(o)] => ActionRule::OutAction { players: p, out_of: o },
         );
 
         Ok(SActionRule { node: node, span })
