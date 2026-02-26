@@ -361,7 +361,7 @@ impl fmt::Display for RuntimeInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
             RuntimeInt::CurrentStageRoundCounter => "stageroundcounter",
-            RuntimeInt::StageRoundCounter { stage } => &format!("stageroundcounter of {}", stage),
+            RuntimeInt::StageRoundCounter { stage } => &format!("stageroundcounter({})", stage),
         };
         f.write_str(s)
     }

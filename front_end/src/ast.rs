@@ -661,14 +661,17 @@ pub mod ast {
     /// # Example
     /// ```text
     /// stageroundcounter
-    /// stageroundcounter of ExampleStage
+    /// stageroundcounter(ExampleStage)
     /// ```
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum RuntimeInt {
         /// Round-Counter of the Current Stage
         CurrentStageRoundCounter,
         /// Round-Counter of a specific Stage
-        StageRoundCounter { stage: String },
+        StageRoundCounter { 
+            #[arbitrary(with = gen_ident)]
+            stage: String 
+        },
     }
 
     /// IntExpr.

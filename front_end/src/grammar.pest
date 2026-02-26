@@ -271,7 +271,7 @@ sum_of_int_collection = { kw_sum ~ "(" ~ int_collection ~ ")" }
 sum_of_card_set = { kw_sum ~ kw_of ~ card_set ~ kw_using ~ pointmap}
 int_extrema_of_card_set = { extrema ~ kw_of ~ card_set ~ kw_using ~ pointmap}
 extrema_of_int_collection = { extrema ~ "(" ~ int_collection ~ ")" }
-runtime_int = { kw_stageroundcounter ~ kw_of ~ stage | kw_stageroundcounter }
+runtime_int = { kw_stageroundcounter ~ "(" ~ stage ~ ")" | kw_stageroundcounter }
 
 int_expr = { 
     int
@@ -490,12 +490,8 @@ flow_component = {
 
 // EndCondition
 // =======================
-logical_compare = {
-  (kw_and | kw_or)
-}
-
 until_bool = { kw_until ~ bool_expr }
-until_bool_repetitions = { kw_until ~ bool_expr ~ logical_compare ~ repetitions }
+until_bool_repetitions = { kw_until ~ bool_expr ~ bool_op ~ repetitions }
 until_repetitions = { repetitions }
 until_end = { kw_until ~ kw_end }
 

@@ -637,7 +637,7 @@ impl CGDSLParser {
     pub(crate) fn runtime_int(input: Node) -> Result<SIntExpr> {
         let span = OwnedSpan::from(input.as_span());
         let node = match_nodes!(input.into_children();
-            [kw_stageroundcounter(_), kw_of(_), stage(s)] => {
+            [kw_stageroundcounter(_), stage(s)] => {
                 sruntime_int(RuntimeInt::StageRoundCounter { stage: s }, span.clone())
             },
             [kw_stageroundcounter(_)] => {
