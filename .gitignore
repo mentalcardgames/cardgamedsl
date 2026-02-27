@@ -1,6 +1,7 @@
 # Rust
 target/
 **/*.rs.bk
+docs/**/build
 Cargo.lock
 
 # IDEs

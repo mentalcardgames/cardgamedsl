@@ -13,6 +13,7 @@
   by doing: Generate AST -> String-Represenation -> Parse -> assert_eq Generated-AST and Parse-Output
 */
 
+use std::fs;
 use std::path::Path;
 use std::process::Command;
 
@@ -99,15 +100,19 @@ fn parse_ast_parse(input: &str) {
 }
 
 fn show_graph(fsm: &Ir<SpannedPayload>, name: &str) {
-    let dot_path_name: &str = &format!("tests_out/{}.dot", name);
-    let png_path_name: &str = &format!("tests_out/{}.png", name);
+    // Make sure the output folder exists
+    let out_dir = Path::new("../tests_out");
+    if !out_dir.exists() {
+        fs::create_dir_all(out_dir).expect("Failed to create output folder");
+    }
 
-    let dot_path = Path::new(dot_path_name);
-    let png_path = Path::new(png_path_name);
+    let dot_path = out_dir.join(format!("{}.dot", name));
+    let png_path = out_dir.join(format!("{}.png", name));
 
-    fsm_to_dot(&fsm, dot_path).unwrap();
+    // Generate .dot file
+    fsm_to_dot(&fsm, &dot_path).unwrap();
 
-    // Call Graphviz
+    // Call Graphviz to generate PNG
     let status = Command::new("dot")
         .args([
             "-Tpng",

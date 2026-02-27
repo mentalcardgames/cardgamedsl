@@ -1,0 +1,67 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{graphicx}
+
+\geometry{margin=1in}
+
+\title{Architecture Documentation}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+This document describes the architecture of the software tool.
+It serves as a formal specification of the system design and its
+extension points.
+
+\section{Overall Architecture}
+
+The system follows a modular architecture:
+
+\begin{itemize}
+    \item Core logic module
+    \item Parser module
+    \item CLI interface
+\end{itemize}
+
+Each module has a clearly defined responsibility and communicates
+through well-defined interfaces.
+
+\section{Data Flow}
+
+The high-level processing pipeline is:
+
+\begin{enumerate}
+    \item Input parsing
+    \item Internal representation construction
+    \item Rule evaluation / processing
+    \item Output generation
+\end{enumerate}
+
+\section{Extension Points}
+
+The system is designed to be extensible in the following areas:
+
+\begin{itemize}
+    \item Adding new rules
+    \item Supporting new input formats
+    \item Extending the CLI
+\end{itemize}
+
+\section{Conclusion}
+
+This document provides a structural overview of the system and
+acts as a foundation for further development.
+
+\end{document}
