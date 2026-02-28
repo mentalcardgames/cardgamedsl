@@ -1,3 +1,5 @@
+TEST COMMIT
+
 # Card Game Description Language (CGDL)
 
 A Domain-Specific Language (DSL) for describing, validating, and executing card game logic, with built-in tooling for analysis, visualization, and editor integration.
