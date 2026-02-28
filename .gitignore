@@ -3,6 +3,7 @@ target/
 **/*.rs.bk
 docs/**/build
 Cargo.lock
+tests_out/
 
 # IDEs
 .vscode/

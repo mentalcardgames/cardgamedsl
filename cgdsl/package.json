@@ -3,7 +3,7 @@
   "displayName": "cgdsl-lsp",
   "description": "Support for cgdsl (Card Game DSL)",
   "version": "0.0.1",
-  "license": "MIT",
+  "license": "MIT OR Apache-2.0",
   "engines": {
     "vscode": "^1.108.0"
   },

@@ -32,11 +32,43 @@ CGDL provides a structured way to define card games, capturing rules, stages, ac
 
 - Rust 1.70+  
 - Node.js 18+ (for building VS Code extension)  
-- VS Code (latest stable release)
+- VS Code (latest stable release)  
 
-### Build Front-End
+---
+
+### Running the VS Code Extension
+
+> **Important:** The `.cgdsl` file must be inside a **workspace folder** so that outputs (`output.json`, `output.dot`, `output.png`) can be created.
+
+Create a workspace folder for your game and add a `.cgdsl` file:
 
 ```bash
-cd CardGameDSL
+mkdir ~/my_cgdl_game
+cd ~/my_cgdl_game
+touch my_game.cgdsl
+```
+
+### Run Extension
+```bash
+cd cgdsl
+cargo build --workspace && code --extensionDevelopmentPath=$(pwd) .
+```
+
+### Build Project
+
+```bash
 cargo build
-cargo test
+```
+
+## License
+
+This project is dual-licensed under the MIT License and the Apache License (Version 2.0).
+
+* [Apache License, Version 2.0](LICENSE-APACHE)
+* [MIT License](LICENSE-MIT)
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.

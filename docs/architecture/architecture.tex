@@ -6,7 +6,7 @@
 \usepackage{geometry}
 \usepackage{hyperref}
 \usepackage{graphicx}
-\usepackage{float}  % put in preamble
+\usepackage{float}
 
 % Point this to your DOC_OUT directory
 \graphicspath{ {./docs/architecture/build/} }
@@ -137,8 +137,7 @@ When running the extension, the following artifacts are generated:
     \item A serialized file (currently \texttt{*.json})
 \end{itemize}
 
-This ensures both human-readable visualization and machine-processable representations of the game logic.
-
+This ensures both human-readable visualization and serialization of the game logic.
 
 \section{Overall Architecture}
 
@@ -278,7 +277,7 @@ The pipeline consists of two primary stages:
 \end{itemize}
 
 The validated Intermediate Representation (IR) is then used to generate
-machine-readable and visual artifacts.
+serialized version and visual artifacts.
 
 \subsection{1. Source Code}
 
@@ -476,7 +475,7 @@ The front-end processing consists of two main phases: AST Phase and IR Phase.
 After IR validation:
 
 \begin{itemize}
-    \item The \textbf{JSON Serializer} writes a machine-readable IR representation to \texttt{output.json}.
+    \item The \textbf{JSON Serializer} writes a serialized IR representation to \texttt{output.json}.
     \item The \textbf{Dot Generator} produces a Graphviz \texttt{.dot} file (\texttt{output.dot})
           describing the state-transition graph.
     \item The \texttt{dot} command-line tool converts the \texttt{.dot} file into a visual
@@ -512,7 +511,7 @@ This separation allows:
           and interactive commands.
     \item Multi-stage validation ensures errors are caught early while preserving
           meaningful diagnostics.
-    \item Exported artifacts support both visualization and machine processing.
+    \item Exported artifacts support both visualization and serialization.
     \item The pipeline is modular, enabling extension or replacement of any stage
           without affecting others.
 \end{itemize}

@@ -1,5 +1,5 @@
 [workspace]
-license = "MIT"
+license = "MIT OR Apache-2.0"
 resolver = "3"
 members = [
     "front_end",

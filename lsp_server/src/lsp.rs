@@ -363,4 +363,10 @@ impl LanguageServer for Backend {
         // Standard LSP method
         Ok(None)
     }
+
+    async fn goto_definition(&self, _params: GotoDefinitionParams) -> Result<Option<GotoDefinitionResponse>> {
+        // Returning Ok(None) is the standard way to say "No definition available"
+        // without triggering an error in the editor.
+        Ok(None)
+    }
 }

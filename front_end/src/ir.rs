@@ -852,7 +852,7 @@ impl IrBuilder<SpannedPayload> {
             match &cond_rule.cases[i].node {
                 Case::NoBool { flows: spanneds } => {
                     self.build_flows(&spanneds, next_entry, exit);
-                    for j in i..cond_rule.cases.len() {
+                    for j in i+1..cond_rule.cases.len() {
                         self.diagnostics.push(
                             GameFlowError::Unreachable { 
                                 span: cond_rule.cases[j].span.clone() 

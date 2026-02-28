@@ -1,12 +1,19 @@
-/*
-    Manually writing repetitive logic for a walker or lowering-logic or even a mirrored spanned version of the original AST is very annoying.
-    This crate allows to generate all of it.
+// Copyright 2026 Till Hoffmann
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
 
-    We can specify:
-    #[spanned_ast] over a module and it will generate a sub-module with the Spanned-version, walker-logic and lowering-logic with it.
+/// Manually writing repetitive logic for a walker or lowering-logic or even a mirrored spanned version of the original AST is very annoying.
+/// This crate allows to generate all of it.
+/// 
+/// We can specify:
+/// #[spanned_ast] over a module and it will generate a sub-module with the Spanned-version, walker-logic and lowering-logic with it.
+/// 
+/// If you have trouble with declaring the AST then change by your liking.
 
-    If you have trouble with declaring the AST then change by your liking.
-*/
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};

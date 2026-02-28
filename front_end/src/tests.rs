@@ -1,17 +1,15 @@
-/*
-  The testing consists of two types of testing:
-  - Unit-Tests -> for special cases
-  - Generated-Tests -> Arbitrary-style tests (Proptests)
-
-  We need a lot of generated tests because pest is a recursive descent Parser.
-
-  In addition to this:
-  - Each AST-struct/-enum must have a fmt::Display trait that is the corresponding
-  Rule in the grammar.pest (e.g. PlayerExpr::Current => "current").
-
-  This way we can check for mistakes in the AST-declaration and further Parsing errors
-  by doing: Generate AST -> String-Represenation -> Parse -> assert_eq Generated-AST and Parse-Output
-*/
+/// The testing consists of two types of testing:
+/// - Unit-Tests -> for special cases
+/// - Generated-Tests -> Arbitrary-style tests (Proptests)
+/// 
+/// We need a lot of generated tests because pest is a recursive descent Parser.
+/// 
+/// In addition to this:
+/// - Each AST-struct/-enum must have a fmt::Display trait that is the corresponding
+/// Rule in the grammar.pest (e.g. PlayerExpr::Current => "current").
+/// 
+/// This way we can check for mistakes in the AST-declaration and further Parsing errors
+/// by doing: Generate AST -> String-Represenation -> Parse -> assert_eq Generated-AST and Parse-Output
 
 use std::fs;
 use std::path::Path;
