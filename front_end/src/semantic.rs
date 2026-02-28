@@ -4,9 +4,6 @@
   It also checks if a Memory is initialized with the same Type and also used with
   that Type.
 
-  The BachelorThesis does not specify how the Memory is handled. If it is like a Python-
-  style storage of a variable or more like a C-style.
-
   Feel free to optimize and/or change anything that does not feel correct.
 */
 
@@ -225,7 +222,7 @@ impl AstPass for SemanticVisitor {
                                     memory.span.clone(),
                                 ),
                             ));
-                            // TODO: Owner
+                            // TODO: check if owner is correct
                         }
                         SetUpRule::CreatePrecedence {
                             precedence,

@@ -514,9 +514,6 @@ impl IrBuilder<SpannedPayload> {
             }
             FlowComponent::SeqStage { stage } => self.build_seq_stage(&stage.node, entry, exit),
             FlowComponent::SimStage { stage } => {
-                // TODO:
-                // Place holde
-                // Function is just seq stage
                 self.build_sim_stage(&stage.node, entry, exit)
             }
             FlowComponent::GameRule { game_rule } => {
@@ -637,7 +634,7 @@ impl IrBuilder<SpannedPayload> {
     // =========================================================================
     // =========================================================================
     // =========================================================================
-    // TODO: SimStage is not implemented!
+    /// TODO: SimStage is not implemented!
     /// Build SimStage has to worry about the most GameFlowChanges.
     /// UntilEnd has to be handled separately.
     /// EndStage and EndGame are already handled in the build_flows method (can be ignored here).
@@ -855,6 +852,13 @@ impl IrBuilder<SpannedPayload> {
             match &cond_rule.cases[i].node {
                 Case::NoBool { flows: spanneds } => {
                     self.build_flows(&spanneds, next_entry, exit);
+                    for j in i..cond_rule.cases.len() {
+                        self.diagnostics.push(
+                            GameFlowError::Unreachable { 
+                                span: cond_rule.cases[j].span.clone() 
+                            }
+                        )
+                    }
                 }
                 Case::Bool {
                     bool_expr: spanned,

@@ -1,5 +1,3 @@
-// TODO: fix some things like int-collection = int_memory ~ of ~ collection
-
 WHITESPACE = _{ " "+ | "\t" | "\r\n" | "\n" | line_comment | block_comment }
 line_comment = _{ "//" ~ (!"\n" ~ ANY)* }
 block_comment = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
@@ -26,6 +24,9 @@ location    = { ident }
 token       = { ident }
 precedence  = { ident }
 combo       = { ident }
+pointmap    = { ident }
+key         = { ident }
+value       = { ident }
 memory      = { ident }
 // Memory-Types
 single_owner = { player_expr | team_expr | kw_table }
@@ -74,10 +75,6 @@ int_collection_memory = {
 }
 location_collection_memory = { "(" ~ "&LC:" ~ memory ~ kw_of ~ owner ~ ")" | "&LC:" ~ memory }
 card_set_memory = { "(" ~ "&CS:" ~ memory ~ kw_of ~ owner ~ ")" | "&CS:" ~ memory }
-
-pointmap    = { ident }
-key         = { ident }
-value       = { ident }
 
 // Keywords start with lower-case, ident start with upper-case!
 
