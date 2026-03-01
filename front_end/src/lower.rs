@@ -1,16 +1,15 @@
-/*
-    There are two ASTs used in this front-end:
-    Spanned AST and an unspanned (lowered) AST.
+///    There are two ASTs used in this front-end:
+///    Spanned AST and an unspanned (lowered) AST.
+///
+///    The Spanned is used for validation and parsing for
+///    better Error-reporting.
+///
+///    The unspanned AST is given to the game engine.
+///
+///    Lowering-Logic is automatically generated in code_gen.
+///    In this file is the Lower trait defined and certain Lowering-Logic
+///    for specific types.
 
-    The Spanned is used for validation and parsing for
-    better Error-reporting.
-
-    The unspanned AST is given to the game engine.
-
-    Lowering-Logic is automatically generated in code_gen.
-    In this file is the Lower trait defined and certain Lowering-Logic
-    for specific types.
-*/
 
 use crate::spans::*;
 

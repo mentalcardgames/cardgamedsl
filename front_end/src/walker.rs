@@ -1,18 +1,17 @@
-/*
-    There are two ASTs used in this front-end:
-    Spanned AST and an unspanned (lowered) AST.
+///    There are two ASTs used in this front-end:
+///    Spanned AST and an unspanned (lowered) AST.
+///
+///    The Spanned is used for validation and parsing for
+///    better Error-reporting.
+///
+///    The unspanned AST is given to the game engine.
+///
+///    The Spanned AST gets a generated Walker-Implementation as well.
+///    This Walker/Visitor can be used for validation.
+///
+///    The type NodeKind is also generated in code_gen.
+///    How NodeKind is used: Look at symbol.rs or semantic.rs.
 
-    The Spanned is used for validation and parsing for
-    better Error-reporting.
-
-    The unspanned AST is given to the game engine.
-
-    The Spanned AST gets a generated Walker-Implementation as well.
-    This Walker/Visitor can be used for validation.
-
-    The type NodeKind is also generated in code_gen.
-    How NodeKind is used: Look at symbol.rs or semantic.rs.
-*/
 
 use crate::spans::*;
 

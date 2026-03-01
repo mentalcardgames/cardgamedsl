@@ -1,26 +1,25 @@
-/*
-    You can define more AST-structures in here.
-    It will automatically generate a Spanned-Version of the new AST
-    and the corresponding Lowering/Walking logic for it.
+///    You can define more AST-structures in here.
+///    It will automatically generate a Spanned-Version of the new AST
+///    and the corresponding Lowering/Walking logic for it.
+///
+///    Be careful with naming certain structs and enums:
+///    For example the Spanned versions have always a 'S' at the front
+///    of the original naming:
+///    IntExpr -> SIntExpr
+///
+///    Do not do naming like this (in this file):
+///    enum Template {
+///        ...
+///    } 
+///
+///    enum STemplate {
+///        ...
+///    }
+///
+///    This will cause an error.
+///
+///    For more information look at code_gen.
 
-    Be careful with naming certain structs and enums:
-    For example the Spanned versions have always a 'S' at the front
-    of the original naming:
-    IntExpr -> SIntExpr
-
-    Do not do naming like this (in this file):
-    enum Template {
-        ...
-    } 
-
-    enum STemplate {
-        ...
-    }
-
-    This will cause an error.
-
-    For more information look at code_gen.
-*/
 
 use code_gen::*;
 
@@ -286,7 +285,7 @@ pub mod ast {
     /// We need to specify how much needs to be, for example, moved from one place to another.
     /// There are multiple ways:
     /// - A fixed number (IntExpr)
-    /// - A qunatifier (all/any)
+    /// - A quantifier (all/any)
     /// - A range that needs to be satisfied (e.g. >= 3)
     /// 
     /// # Example
@@ -300,7 +299,7 @@ pub mod ast {
         /// Int
         Int {int: IntExpr},
         /// Quantifier
-        Quantifier {qunatifier: Quantifier},
+        Quantifier {quantifier: Quantifier},
         /// IntRange
         IntRange {int_range: IntRange},
     }
@@ -1409,33 +1408,56 @@ pub mod ast {
     // ===========================================================================
     // ===========================================================================
     // ===========================================================================
-    /// Game is a list FlowComponents.
+    /// The root structure representing a complete game definition.
+    ///
+    /// A `Game` is defined as a linear sequence of execution blocks. 
+    /// The engine processes these flows in order, effectively running 
+    /// the "script" of the game's life from initialization to conclusion.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub struct Game {
-        /// List of FlowComponents
+        /// The top-level sequence of stages, rules, and logic that 
+        /// constitute the gameplay.
         #[arbitrary(with = gen_flows_safe)]
         pub flows: Vec<FlowComponent>,
     }
-
-    /// FlowComponent is showing the structure of each rule.
-    /// Certain rules can have more Rules inside of them (all but GameRule).
+    /// The recursive building block of the game's logic tree.
+    ///
+    /// A `FlowComponent` can be a high-level container (like a Stage), 
+    /// a branching logic gate (like If or Choice), or a terminal 
+    /// instruction (GameRule).
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum FlowComponent {
-        /// Sequential Stage
-        SeqStage { stage: SeqStage},
-        /// Simultaneous Stage
-        SimStage { stage: SimStage},
-        /// Game-Rule (Terminal)
-        GameRule { game_rule: GameRule},
-        IfRule { if_rule: IfRule},
-        ChoiceRule { choice_rule: ChoiceRule},
-        OptionalRule{ optional_rule: OptionalRule},
-        TriggerRule{ trigger_rule: TriggerRule},
-        Conditional { conditional: Conditional},
+        /// A turn-based container for sequential player actions.
+        SeqStage { stage: SeqStage },
+
+        /// A concurrent container for simultaneous player actions.
+        SimStage { stage: SimStage },
+
+        /// A terminal operation that mutates the state (Move, Flip, Score, etc.).
+        /// This variant does not contain further nested FlowComponents.
+        GameRule { game_rule: GameRule },
+
+        /// A simple conditional branch.
+        IfRule { if_rule: IfRule },
+
+        /// A manual decision point for a player.
+        ChoiceRule { choice_rule: ChoiceRule },
+
+        /// A voluntary action block.
+        OptionalRule { optional_rule: OptionalRule },
+
+        /// A race-condition trigger for simultaneous phases.
+        TriggerRule { trigger_rule: TriggerRule },
+
+        /// A complex multi-branch if-else-if structure.
+        Conditional { conditional: Conditional },
     }
 
-    /// SetUpRule is defining the "Game-Data" that we need to play a game.
-    /// For example: We need Players, Cards, etc. to play a game.
+    /// Terminal rules used to instantiate and initialize the game's core entities.
+    ///
+    /// `SetUpRule` defines the "World State" before any gameplay occurs. It 
+    /// populates the game environment with players, cards, tokens, and 
+    /// initial memory values.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum SetUpRule {
         /// Create a group of Players that are in the game
@@ -1508,52 +1530,78 @@ pub mod ast {
     }
 
 
-    /// Action-Rule defines permutations of the game state that
-    /// are not creations of new things.
+    /// Terminal actions that mutate the current game state.
+    /// 
+    /// These rules represent "non-constructive" permutations—they modify, 
+    /// move, or reassign existing game data rather than instantiating 
+    /// new objects.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum ActionRule {
-        /// Give a CardSet a different Status
+        /// Updates the [`Status`] of all cards within a [`CardSet`].
+        /// Used for actions like "Reveal Hand" or "Face Down All Cards."
         FlipAction { card_set: CardSet, status: Status },
-        /// Shuffle a CardSet
-        ShuffleAction {card_set: CardSet},
-        /// Set a Player/PlayerCollection out of stage, game, etc.
-        OutAction {players: Players, out_of: OutOf},
-        /// Assign a Value to a Memory
-        SetMemory{
+
+        /// Randomizes the order of cards within a specific [`CardSet`].
+        ShuffleAction { card_set: CardSet },
+
+        /// Removes a player or group from the current context.
+        /// Can represent a player being "Eliminated" from the game or 
+        /// "Passing" for the remainder of a stage.
+        OutAction { players: Players, out_of: OutOf },
+
+        /// Assigns a specific value to a persistent game variable.
+        SetMemory { 
             #[arbitrary(with = gen_ident)]
-            memory: String,
-            memory_type: MemoryType
+            memory: String, 
+            memory_type: MemoryType 
         },
-        /// Reset Memory (first initialization?)
-        ResetMemory {
+
+        /// Reinitializes a memory variable to its default/starting state.
+        ResetMemory { 
             #[arbitrary(with = gen_ident)]
-            memory: String
+            memory: String 
         },
-        /// Cycle to a certain Player (End turn of the current Player and set other player active)
-        CycleAction {player:PlayerExpr},
-        /// Bid a certain amount
-        BidAction{quantitiy: Quantity},
-        /// Bid a certain amount and store it in a Memory
-        BidMemoryAction{ 
+
+        /// Manually updates the active player context.
+        /// Often used to force a turn change or skip a player.
+        CycleAction { player: PlayerExpr },
+
+        /// Executes a bidding/wagering mechanic using a specific quantity.
+        BidAction { quantitiy: Quantity },
+
+        /// Executes a bid and records the result (and the bidder) in a 
+        /// memory variable for later evaluation.
+        BidMemoryAction { 
             #[arbitrary(with = gen_ident)]
-            memory: String,
-            quantity: Quantity,
-            owner: Owner,
+            memory: String, 
+            quantity: Quantity, 
+            owner: Owner 
         },
-        /// End Turn, End Stage, etc.
-        EndAction{end_type: EndType},
-        /// Demand certain information
-        DemandAction{demand_type: DemandType},
-        /// Demand certain information and store it in Memory
-        DemandMemoryAction{demand_type: DemandType, 
+
+        /// Signals the forced termination of a specific scope.
+        /// Can trigger an "End of Turn" or "End of Stage" transition.
+        EndAction { end_type: EndType },
+
+        /// Pauses execution to request specific information from a player.
+        DemandAction { demand_type: DemandType },
+
+        /// Requests information from a player and saves the response 
+        /// into a memory variable.
+        DemandMemoryAction { 
+            demand_type: DemandType, 
             #[arbitrary(with = gen_ident)]
-            memory: String
+            memory: String 
         },
-        /// Move CardSets around
-        Move{move_type: MoveType},
+
+        /// Executes a movement operation (Cards or Tokens).
+        /// This delegates to the [`MoveType`] hierarchy we discussed.
+        Move { move_type: MoveType },
     }
 
-    /// Evaluate a Score or a Winner.
+    /// Terminal rules used to calculate numerical standings or determine game finality.
+    ///
+    /// `ScoringRule` acts as the "Referee" of the state machine, translating 
+    /// game actions into competitive results.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum ScoringRule {
         /// Permutate the Score
@@ -1562,10 +1610,11 @@ pub mod ast {
         WinnerRule{ winner_rule: WinnerRule},
     }
 
-    /// Terminal Actions:
-    /// - **SetUpRule**
-    /// - **ActionRule**
-    /// - **ScoringRule**
+    /// Terminal commands that perform direct mutations on the Game State.
+    ///
+    /// Unlike structural rules (like `If` or `Conditional`), these variants 
+    /// represent the final execution leaf nodes that actually modify 
+    /// data within the game session.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum GameRule {
         SetUp { setup: SetUpRule},
@@ -1573,7 +1622,11 @@ pub mod ast {
         Scoring{scoring: ScoringRule},
     }
 
-    /// Sequential Stage can be seen as a 'while-loop'.
+    /// Represents a sequential game phase focused on an individual player's actions.
+    ///
+    /// A `SeqStage` functions as a standard control loop where a single player 
+    /// interacts with the game state. Unlike a [`SimStage`], this environment 
+    /// is deterministic and synchronous, typically representing a "Turn."
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub struct SeqStage {
         /// Name/Identifier
@@ -1586,20 +1639,29 @@ pub mod ast {
         pub flows: Vec<FlowComponent>,
     }
 
-    /// Simultaneous Stage can be seen as a complex 'while-loop' with multiple Players all at once.
+    /// Represents a concurrent game phase where multiple players act simultaneously.
+    ///
+    /// A `SimStage` functions like a specialized parallel loop. All players within 
+    /// the [`PlayerCollection`] can trigger the included `flows` at any time 
+    /// (subject to rules like [`TriggerRule`]). The stage persists until the 
+    /// [`EndCondition`] evaluates to true.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub struct SimStage {
         /// Name/Identifier
         #[arbitrary(with = gen_ident)]
         pub stage: String,
-        /// For a certain gtoup of Players
+        /// For a certain group of Players
         pub players: PlayerCollection,
         pub end_condition: EndCondition,
         #[arbitrary(with = gen_flows_safe)]
         pub flows: Vec<FlowComponent>,
     }
 
-    /// Case can be seen as an If-Rule but with the option of no Condition.
+    /// Represents a single branch within a [`Conditional`] block.
+    ///
+    /// A `Case` can either be guarded by a logical condition or act as an 
+    /// unconditional "else" block that captures any execution flow not 
+    /// handled by previous cases.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum Case {
         NoBool{
@@ -1613,14 +1675,38 @@ pub mod ast {
         },
     }
 
-    /// Conditional is either a If-Statement after If-Statement or more likely an If-Else.
+    /// Represents a multi-branch decision structure, typically functioning as 
+    /// an `if-else if-else` chain.
+    ///
+    /// This structure evaluates a sequence of [`Case`] blocks in order. 
+    /// Usually, the first case whose condition is met will execute its 
+    /// associated flows, and the rest of the conditional block is skipped.
+    ///
+    /// ### Execution Logic
+    /// 1. **Sequential Check:** The engine iterates through the `cases` vector.
+    /// 2. **Evaluation:** For each case, the condition is tested.
+    /// 3. **Branch Selection:** Upon the first `true` result, that case's 
+    ///    flows are executed.
+    /// 4. **Termination:** Execution exits the `Conditional` block immediately 
+    ///    after one branch is taken (preventing multiple branches from firing).
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub struct Conditional {
         #[arbitrary(with = gen_vec_min_1)]
         pub cases: Vec<Case>,
     }
 
-    /// If-Rule is a basic If-Statement.
+    /// Represents a conditional execution block within the game logic.
+    ///
+    /// The `IfRule` allows the engine to perform actions only when specific 
+    /// game states are met (e.g., "If Player 1 has more than 10 Gold, then...").
+    ///
+    /// ### Execution Logic
+    /// 1. **Evaluation:** The engine evaluates the [`BoolExpr`] against the current 
+    ///    global or player state.
+    /// 2. **Branching:**
+    ///    * If `true`: The sequence of [`FlowComponent`]s is executed.
+    ///    * If `false`: The flows are skipped entirely, and the engine moves 
+    ///      to the next rule.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub struct IfRule {
         pub condition: BoolExpr,
@@ -1628,29 +1714,67 @@ pub mod ast {
         pub flows: Vec<FlowComponent>,
     }
 
-    /// Optional-Rule is a Rule that can be executed optionally.
+    /// Defines a sequence of game actions that a player can choose to 
+    /// perform or skip entirely.
+    ///
+    /// This structure is commonly used for "May" clauses in game logic:
+    /// * "You **may** pay 2 Gold to draw a card."
+    /// * "At the start of your turn, you **may** move one token."
+    ///
+    /// ### Execution Logic
+    /// 1. **Prompt:** The engine presents the player with the option to 
+    ///    activate the `flows`.
+    /// 2. **Decision:** The player either accepts (executing the flows) 
+    ///    or declines (skipping to the next part of the turn).
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub struct OptionalRule {
         #[arbitrary(with = gen_flows_safe)]
         pub flows: Vec<FlowComponent>,
     }
 
-    /// Choice-Rule is a Rule where you have to choose an option from a set of options.
+    /// Defines a branching decision point where a player must select one path from 
+    /// a list of available options.
+    ///
+    /// This structure is used to implement "Either/Or" game logic, such as:
+    /// * "Choose to draw 2 cards **OR** gain 5 Gold."
+    /// * "Discard a card to move a token **OR** pass your turn."
+    ///
+    /// ### Execution Flow
+    /// 1. **Presentation:** The game engine pauses and presents the `options` to 
+    ///     the active player.
+    /// 2. **Selection:** The player submits a choice index.
+    /// 3. **Execution:** The engine executes the specific [`FlowComponent`] 
+    ///    associated with that choice.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub struct ChoiceRule {
         #[arbitrary(with = gen_flows_safe)]
         pub options: Vec<FlowComponent>,
     }
 
-    /// Used in Simultaneous Stage. 
-    /// If you are the first one that reaches it you can do the flows inside (the others can not anymore).
+    /// Defines a competitive "First-to-Claim" rule within a simultaneous game stage.
+    ///
+    /// This structure acts as a gatekeeper for specific game logic. During phases 
+    /// where multiple players are acting at once, the first player to satisfy 
+    /// the conditions for this trigger "locks" it, preventing all other players 
+    /// from executing the contained logic.
+    ///
+    /// ### Execution Logic
+    /// 1. **Detection:** The engine monitors for the specific trigger condition.
+    /// 2. **Race Resolution:** The first player to reach the trigger claims it.
+    /// 3. **Flow Execution:** Only the claimant executes the list of `flows`.
+    /// 4. **Exclusion:** The trigger is marked as "resolved" or "empty" for 
+    ///    all other participants.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub struct TriggerRule {
         #[arbitrary(with = gen_flows_safe)]
         pub flows: Vec<FlowComponent>,
     }
 
-    /// Different ways of moving set of cards around.
+    /// A high-level dispatcher for all types of physical movement within the game.
+    ///
+    /// This enum acts as a container for specialized movement logic, allowing 
+    /// the game engine to process different types of transfers (Cards vs. Tokens) 
+    /// and different contexts (Dealing vs. Exchanging) through a unified interface.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum MoveType {
         Deal { deal: DealMove },
@@ -1659,33 +1783,47 @@ pub mod ast {
         Place{ token: TokenMove},
     }
 
-    /// Move a CardSet to another CardSet.
+    /// Defines the source, destination, and state changes for moving cards.
+    ///
+    /// This structure is the core implementation for all card-based transitions, 
+    /// allowing for both bulk moves and quantity-limited transfers.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum MoveCardSet {
         Move { from: CardSet, status: Status, to: CardSet },
         MoveQuantity { quantity: Quantity, from: CardSet, status: Status, to: CardSet},
     }
 
-    /// Move a CardSet to another CardSet
-    /// by simply removing the first one and the adding it to the second one.
+    /// Represents a standard, atomic transfer of a [`CardSet`] between two locations.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum ClassicMove {
         MoveCardSet {move_cs: MoveCardSet},
     }
 
-    /// Deal is basically a classic-move?
+    /// Represents the "Deal" phase or action in a card-based game.
+    ///
+    /// Dealing is a specialized movement that typically involves distributing 
+    /// cards from a source (e.g., a "Deck" or "Stock") to one or more 
+    /// players' private areas (e.g., "Hands").
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum DealMove {
         MoveCardSet {deal_cs: MoveCardSet},
     }
 
-    /// Exchange CardSets
+    /// Represents an action that transfers or exchanges a structured set of cards.
+    ///
+    /// While a [`TokenMove`] typically handles individual units or quantities, 
+    /// an `ExchangeMove` is used for high-level operations involving defined 
+    /// collections (e.g., trading a "Hand," moving a "Discard Pile," or 
+    /// passing a "Draft Pack").
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum ExchangeMove {
         MoveCardSet {exchange_cs: MoveCardSet},
     }
 
-    /// Place tokens on a Location.
+    /// Defines an action that moves game tokens between two locations.
+    ///
+    /// This supports both moving a single specific token and moving a 
+    /// specific quantity of a token type.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum TokenMove {
         Place {
@@ -1698,14 +1836,21 @@ pub mod ast {
             from_loc: TokenLocExpr, to_loc: TokenLocExpr},
     }
 
-    /// Define a Token-Location for Tokens.
+    /// Defines the expression used to locate tokens within the game world.
+    ///
+    /// This enum specifies whether a token is located within a general game 
+    /// structure or if it is tied to a specific player's context.
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum TokenLocExpr {
         Groupable{ groupable: Groupable},
         GroupablePlayers { groupable: Groupable, players: Players},
     }
 
-    /// Score Points to a Player or to a Memory.
+    /// Represents an action that awards or modifies points within the game state.
+    ///
+    /// Points can be attributed to an individual [`Player`] (e.g., for a leaderboard) 
+    /// or stored within a [`Memory`] slot (e.g., a global counter or team-based 
+    /// shared score).
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum ScoreRule {
         Score {int: IntExpr, players: Players},
@@ -1716,7 +1861,10 @@ pub mod ast {
         },
     }
 
-    /// There are specific types in a game that can determine a win like a score of a Player.
+    /// Specifies the metric or attribute used to evaluate a win condition.
+    ///
+    /// This enum identifies which player-owned or global values should be 
+    /// compared when determining the outcome of a game (e.g., via `WinnerWith`).
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum WinnerType {
         Score,
@@ -1727,7 +1875,10 @@ pub mod ast {
         Position,
     }
 
-    /// Declares the Winner/Winners of the game. 
+    /// Defines the logic used to declare the winner(s) at the end of a game.
+    ///
+    /// This enum supports both explicit declarations (pointing to specific players) 
+    /// and rule-based declarations (calculating winners based on game statistics).
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Arbitrary)]
     pub enum WinnerRule {
         Winner {players: Players},

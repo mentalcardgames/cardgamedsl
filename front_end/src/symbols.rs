@@ -1,10 +1,9 @@
-/*
-    We check the Symbols via two main concepts: Initialization and Usage.
-    If a Variable is used we give the Variable a NoType. If it is initialized
-    then we give it the specific initialization Type (e.g. GameType::Player).
-    We can catch if a Symbol is never initialized and/or if it is defined
-    multiple times.
-*/
+///    We check the Symbols via two main concepts: Initialization and Usage.
+///    If a Variable is used we give the Variable a NoType. If it is initialized
+///    then we give it the specific initialization Type (e.g. GameType::Player).
+///    We can catch if a Symbol is never initialized and/or if it is defined
+///    multiple times.
+
 
 use std::collections::HashMap;
 

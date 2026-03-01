@@ -1,18 +1,17 @@
-/*
-    This is the Parsing logic. We use a "direct to AST"-parsing method.
-    The library used are pest and especially pest_consume.
+///    This is the Parsing logic. We use a "direct to AST"-parsing method.
+///    The library used are pest and especially pest_consume.
+///
+///    We use (or return to) a Sigil-style type naming in the future to get rid of ambiguity:
+///    - Players start with "P"
+///    - Teams start with "T"
+///    - Combos start with "C"
+///    - ...
+///    - Memory-Type:
+///    > Player-Memory starts with "P:"
+///    > ...
+///
+///    This would make the parsing very dumb and easy to extend.
 
-    We use (or return to) a Sigil-style type naming in the future to get rid of ambiguity:
-    - Players start with "P"
-    - Teams start with "T"
-    - Combos start with "C"
-    - ...
-    - Memory-Type:
-    > Player-Memory starts with "P:"
-    > ...
-
-    This would make the parsing very dumb and easy to extend.
-*/
 
 use pest_consume::{Parser, match_nodes};
 
@@ -1311,7 +1310,7 @@ impl CGDSLParser {
         let span = OwnedSpan::from(input.as_span());
         let node = match_nodes!(input.into_children();
             [int_expr(n)] => Quantity::Int { int: n },
-            [quantifier(n)] => Quantity::Quantifier { qunatifier: n },
+            [quantifier(n)] => Quantity::Quantifier { quantifier: n },
             [int_range(n)] => Quantity::IntRange {int_range: n },
         );
 

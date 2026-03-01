@@ -49,6 +49,10 @@ impl Backend {
         }
     }
 
+    /// Makes multiple checks until one fails:
+    /// - Check if there are any parsing errors
+    /// - Check if there are any symbol errors and semantic errors
+    /// - if everything is fine then update the symbol_table
     pub fn get_diagnostics(&self, rope: &Rope) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
@@ -77,6 +81,12 @@ impl Backend {
         diagnostics
     }
 
+    /// Makes multiple checks until one fails:
+    /// - Check if there are any parsing errors
+    /// - Check if there are any symbol errors and semantic errors
+    /// - if everything is fine then update the symbol_table 
+    /// 
+    /// Additionally check the ControlFlow/GameFlow errors (e.g. reachability) in the graph/FSM.
     pub fn get_did_save_diagnostics(&self, rope: &Rope) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
@@ -112,6 +122,7 @@ impl Backend {
         diagnostics
     }
 
+    /// Return the last saved AST document
     pub async fn get_rope(&self, uri: &Url) -> Rope {
         let mut docs = self.documents.lock().await;
 
@@ -121,6 +132,7 @@ impl Backend {
         doc.rope.clone()
     }
 
+    /// Apply the corresponding change and return the last saved AST document.
     pub async fn get_rope_and_apply_change(
         &self,
         uri: &Url,
@@ -139,6 +151,7 @@ impl Backend {
         doc.rope.clone()
     }
 
+    /// Return the current SemanticTokens.
     pub fn get_semantic_tokens(&self) -> Option<Vec<SemanticToken>> {
         let tokens;
         if let Some(safe_ast) = &*self.last_ast.load() {

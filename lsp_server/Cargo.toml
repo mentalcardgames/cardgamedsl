@@ -2,7 +2,7 @@
 name = "lsp_server"
 version = "0.1.0"
 edition = "2024"
-license = "MIT"
+license.workspace = true  # This pulls the license from the root
 
 [dependencies]
 front_end = { path = "../front_end" }

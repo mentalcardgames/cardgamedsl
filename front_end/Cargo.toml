@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 # Points cargo to your build script
 build = "build.rs"
-license = "MIT OR Apache-2.0"
+license.workspace = true  # This pulls the license from the root
 
 [dependencies]
 code_gen = { path = "../code_gen" }

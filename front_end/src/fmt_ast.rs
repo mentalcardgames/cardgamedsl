@@ -1,3 +1,5 @@
+/// Has all format-logic of the AST.
+
 use core::fmt;
 
 use crate::ast::*;
@@ -81,7 +83,7 @@ impl fmt::Display for Quantity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
             Quantity::Int { int } => &format!("{}", int),
-            Quantity::Quantifier { qunatifier } => &format!("{}", qunatifier),
+            Quantity::Quantifier { quantifier: qunatifier } => &format!("{}", qunatifier),
             Quantity::IntRange { int_range } => &format!("{}", int_range),
         };
         f.write_str(s)

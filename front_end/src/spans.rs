@@ -1,9 +1,8 @@
-/*
-    Span is used to show the specific error in the file.
-    It exists a "Spanned-Tree" which has the same structure
-    as the AST but everything is wrapped in a span.
-    This allows better diagnostics and a nicer user experience.
-*/
+///    Span is used to show the specific error in the file.
+///    It exists a "Spanned-Tree" which has the same structure
+///    as the AST but everything is wrapped in a span.
+///    This allows better diagnostics and a nicer user experience.
+
 
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 

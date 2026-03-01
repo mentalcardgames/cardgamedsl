@@ -210,7 +210,7 @@ fn span_fields(fields: &mut syn::Fields) {
     for field in fields.iter_mut() {
         field.ty = transform_type_spanned(&field.ty);
 
-        // 2. Filter out attributes that shouldn't be in the spanned AST
+        // Filter out attributes that shouldn't be in the spanned AST
         field.attrs.retain(|attr| {
             // Keep the attribute only if it's NOT 'arbitrary'
             !attr.path().is_ident("arbitrary") && !attr.path().is_ident("proptest")

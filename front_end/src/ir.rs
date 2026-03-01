@@ -1,14 +1,12 @@
-/*
-  Transforming the AST to an IR is done here.
-
-  For someone doing the SimStage:
-  - We need a new Type of State (right now only state-id is used).
-  => Just declare a new State-enum:
-    enum State {
-      seq: usize,
-      sim: /* Your Custom SimStage Logic */
-    }
-*/
+///  Transforming the AST to an IR is done here.
+///
+///  For someone doing the SimStage:
+///  - We need a new Type of State (right now only state-id is used).
+///  => Just declare a new State-enum:
+///    enum State {
+///      seq: usize,
+///      sim: /* Your Custom SimStage Logic */
+///    }
 
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{

@@ -5,6 +5,7 @@ use front_end::{
 use pest::error::LineColLocation;
 use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, Position, Range};
 
+/// Taking a Pest Error and give a correct visual report for the error (red-squiggle lines under the certain text).
 pub fn pest_error_to_diagnostic(pest_err: pest::error::Error<Rule>) -> Diagnostic {
     let range = match pest_err.line_col {
         LineColLocation::Pos((line, col)) => {
@@ -80,6 +81,7 @@ pub fn pest_error_to_diagnostic(pest_err: pest::error::Error<Rule>) -> Diagnosti
     }
 }
 
+/// Converts a symbol error (from the front_end) into a tower-lsp Diagnostic.
 pub fn symbol_error_to_diagnostics(symbol_error: &SymbolError) -> Diagnostic {
     let value;
     let message;
@@ -107,6 +109,7 @@ pub fn symbol_error_to_diagnostics(symbol_error: &SymbolError) -> Diagnostic {
     }
 }
 
+/// Converts a semantic error (from the front_end) into a tower-lsp Diagnostic.
 pub fn semantic_error_to_diagnostics(semantic_error: &SemanticError) -> Diagnostic {
     let spanned;
     let message;
@@ -138,6 +141,7 @@ pub fn semantic_error_to_diagnostics(semantic_error: &SemanticError) -> Diagnost
     }
 }
 
+/// Converts a program error (from the front_end) into a tower-lsp Diagnostic.
 pub fn program_error_to_diagnostics(program_error: &GameFlowError) -> Diagnostic {
     let spanned;
     let message;
@@ -183,6 +187,7 @@ pub fn program_error_to_diagnostics(program_error: &GameFlowError) -> Diagnostic
     }
 }
 
+/// Takes the Owned-Span struct and converts it into tower-lsp Range.
 pub fn to_range(span: &OwnedSpan) -> Range {
     // pest position starts at 1!
     let start_pos = Position {

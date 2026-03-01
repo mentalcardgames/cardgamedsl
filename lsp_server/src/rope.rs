@@ -30,6 +30,24 @@ pub fn apply_change(rope: &mut Rope, change: &TextDocumentContentChangeEvent) {
     }
 }
 
+/// Converts an LSP [`Position`] (line and UTF-16 column) into a flat character index 
+/// within the [`Rope`].
+///
+/// ### Behavior
+/// * **Line Indexing:** If the requested line index is out of bounds, it returns the 
+///   total length of the document (the end of the rope).
+/// * **UTF-16 to Char Mapping:** Since LSP positions are reported in UTF-16 code units, 
+///   this function iterates through the line to correctly handle multi-byte characters 
+///   (like emojis) that occupy two UTF-16 units but one character index.
+/// * **Newline Handling:** The conversion stops if a newline (`\r` or `\n`) is encountered, 
+///   ensuring the offset stays within the logical bounds of the specified line.
+///
+/// ### Parameters
+/// * `rope`: The text buffer to query.
+/// * `position`: The LSP position containing the 0-indexed line and character offset.
+///
+/// ### Returns
+/// The absolute `usize` character index suitable for methods like `rope.insert()` or `rope.remove()`.
 pub fn position_to_char(rope: &Rope, position: Position) -> usize {
     let line_idx = position.line as usize;
     let utf16_col = position.character as usize;

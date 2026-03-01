@@ -5,14 +5,17 @@ use pest_consume::Error;
 use tower_lsp::lsp_types::{
     CompletionItem, CompletionItemKind, CompletionResponse, InsertTextFormat,
 };
-// use get_snippet_map;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
+/// Generated Snippet completion rules
 static SNIPPET_LOOKUP: LazyLock<HashMap<&'static str, Vec<&'static str>>> =
     LazyLock::new(|| get_all_snippets());
 
-// Inside your completion function
+
+/// If the parser throws a parser error then we can try to use auto-completion logic.
+/// Pest returns a set of positives (rules that are expected). We check the postive rule
+/// and get the correct completion from it.  
 pub fn get_completions(
     err: Error<Rule>,
     symbol_table: &DashMap<GameType, Vec<String>>,
@@ -64,6 +67,8 @@ pub fn get_completions(
     }
 }
 
+/// If we expect a certain defined variable we check our symbol_table to give the possible variables that
+/// are defined with the corresponding type.
 fn variable_completion(
     rule: &Rule,
     symbol_table: &DashMap<GameType, Vec<String>>,
@@ -84,6 +89,7 @@ fn variable_completion(
     }
 }
 
+/// Helper function to make a snippet for variabales.
 fn make_variable_snippet(
     ty: GameType,
     detail: &str,
@@ -102,7 +108,7 @@ fn make_variable_snippet(
     None
 }
 
-// Helper to build the Snippet item
+/// Helper to build the Snippet item.
 fn make_snippet(label: &str, template: &str, detail: &str) -> CompletionItem {
     CompletionItem {
         label: label.into(),
@@ -114,6 +120,8 @@ fn make_snippet(label: &str, template: &str, detail: &str) -> CompletionItem {
     }
 }
 
+/// If e.g. a rule is a key-words then we strip the "kw_"-prefix from the rule and
+/// give the corresponding word for auto-completion.
 fn clean_label(input: &str) -> String {
     let clean = input.replace("kw_", "").replace("_", " ");
     clean
@@ -123,6 +131,6 @@ fn clean_label(input: &str) -> String {
             !c.is_numeric() && !matches!(c, '$' | ':' | '{' | '}')
         })
         .collect::<String>()
-        .trim() // Optional: clean up leading/trailing spaces
+        .trim() // clean up leading/trailing spaces
         .to_string()
 }
