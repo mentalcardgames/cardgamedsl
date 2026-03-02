@@ -17,16 +17,23 @@
   },
   "main": "./out/extension.js",
   "contributes": {
-    "languages": [{
-      "id": "cgdsl",
-      "aliases": ["CGDSL", "cgdsl"],
-      "extensions": [".cgdsl"],
-      "configuration": "./language-configuration.json",
-      "icon": {
-        "light": "./icons/cgdsl-light-icon.svg",
-        "dark": "./icons/cgdsl-dark-icon.svg"
+    "languages": [
+      {
+        "id": "cgdsl",
+        "aliases": [
+          "CGDSL",
+          "cgdsl"
+        ],
+        "extensions": [
+          ".cgdsl"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/cgdsl-light-icon.svg",
+          "dark": "./icons/cgdsl-dark-icon.svg"
+        }
       }
-    }],
+    ],
     "themes": [
       {
         "label": "CGDSL Dark",
@@ -50,24 +57,62 @@
         }
       ]
     },
-    "grammars": [{
-      "language": "cgdsl",
-      "scopeName": "source.cgdsl",
-      "path": "./syntaxes/cgdsl.tmLanguage.json"
-    }],
+    "grammars": [
+      {
+        "language": "cgdsl",
+        "scopeName": "source.cgdsl",
+        "path": "./syntaxes/cgdsl.tmLanguage.json"
+      }
+    ],
     "semanticTokenTypes": [
-      { "id": "player", "description": "Game player entity" },
-      { "id": "team", "description": "Team identifier" },
-      { "id": "location", "description": "Map coordinate" },
-      { "id": "precedence", "description": "Priority level" },
-      { "id": "pointmap", "description": "Point mapping" },
-      { "id": "combo", "description": "Combo sequence" },
-      { "id": "key", "description": "Map key" },
-      { "id": "value", "description": "Map value" },
-      { "id": "memory", "description": "Memory address" },
-      { "id": "token", "description": "Generic token" },
-      { "id": "stage", "description": "Game stage" },
-      { "id": "notype", "description": "Fallback type" }
+      {
+        "id": "player",
+        "description": "Game player entity"
+      },
+      {
+        "id": "team",
+        "description": "Team identifier"
+      },
+      {
+        "id": "location",
+        "description": "Map coordinate"
+      },
+      {
+        "id": "precedence",
+        "description": "Priority level"
+      },
+      {
+        "id": "pointmap",
+        "description": "Point mapping"
+      },
+      {
+        "id": "combo",
+        "description": "Combo sequence"
+      },
+      {
+        "id": "key",
+        "description": "Map key"
+      },
+      {
+        "id": "value",
+        "description": "Map value"
+      },
+      {
+        "id": "memory",
+        "description": "Memory address"
+      },
+      {
+        "id": "token",
+        "description": "Generic token"
+      },
+      {
+        "id": "stage",
+        "description": "Game stage"
+      },
+      {
+        "id": "notype",
+        "description": "Fallback type"
+      }
     ]
   },
   "scripts": {
@@ -81,14 +126,14 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
+    "@types/node": "^22.19.13",
     "@types/vscode": "^1.108.0",
     "@typescript-eslint/eslint-plugin": "^8.39.0",
     "@typescript-eslint/parser": "^8.39.0",
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.32.0",
-    "mocha": "^11.7.5",
+    "mocha": "^11.3.0",
     "typescript": "^5.9.2"
   },
   "dependencies": {

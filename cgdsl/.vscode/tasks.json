@@ -1,0 +1,39 @@
+// See https://go.microsoft.com/fwlink/?LinkId=733558
+// for the documentation about the tasks.json format
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "watch",
+			"problemMatcher": "$tsc-watch",
+			"isBackground": true,
+			"presentation": {
+				"reveal": "never"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+				"label": "Build & Copy LSP",
+				"type": "shell",
+				"command": "cargo build --manifest-path ../Cargo.toml -p lsp_server && mkdir -p bin && cp ../target/debug/lsp_server bin/ && chmod +x bin/lsp_server",
+				"windows": {
+						"command": "cargo build --manifest-path ..\\Cargo.toml -p lsp_server ; if (!(Test-Path bin)) { New-Item -ItemType Directory bin } ; copy-item ..\\target\\debug\\lsp_server.exe bin\\"
+				},
+				"group": "build",
+				"problemMatcher": ["$rustc"]    
+		},
+		{
+				"label": "Prepare Development Environment",
+				"dependsOn": [
+						"Build & Copy LSP",
+						"npm: watch"
+				],
+				"group": "build",
+				"problemMatcher": []
+		}
+	],
+}
